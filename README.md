@@ -1,10 +1,60 @@
 # Maternity Health Copilot | AI for Health
 
-**Educational resource matching and appointment question planning, not a medical assistant.**
+### Make every care conversation easier to prepare for.
+
+**Maternity Health Copilot is a local-first educational navigation and
+appointment preparation system for pregnancy and postpartum.** It turns bounded
+stage, topic and format preferences into ranked educational conversation
+starters and a printable question list for discussion with a qualified
+healthcare professional.
+
+[![CI](https://github.com/Emutisya/maternity-health-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Emutisya/maternity-health-copilot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > Not medical advice. For symptoms or concerns, contact a qualified healthcare professional. If you think there is an emergency, contact local emergency services.
 
-A standalone, local-first research prototype exploring how classical information retrieval might help people find pregnancy and postpartum educational conversation starters. It deliberately does **not** assess health, provide individualized care or judge whether anyone is safe. All personas and catalog resources are synthetic. No clinical review, patient study, partnership or clinical effectiveness is claimed.
+## The invention thesis
+
+A care appointment is not only a clinical encounter. It is also a conversation:
+what to ask, what to clarify, and how to prepare. Information is useful only
+when someone can navigate it and carry the right questions into that conversation.
+
+This project explores a deliberately bounded role for AI: **organize educational
+topics and support preparation, while leaving clinical judgment with qualified
+professionals.** It does not need a person's symptom narrative or medical record
+to demonstrate that workflow.
+
+The global ambition is an accessible preparation layer around human maternity
+care: locally usable educational navigation, professionally reviewed content,
+and multilingual question planning. Reaching that ambition requires clinical,
+community and accessibility review; the current release establishes the
+working retrieval and preparation core.
+
+## Experience the working system
+
+| Step | What the Copilot does today |
+| --- | --- |
+| Orient | Lets the user choose pregnancy or postpartum as a bounded preference |
+| Focus | Offers six educational topics, two formats and planning/support preferences |
+| Discover | Uses a fitted TF-IDF model to rank stage-compatible demo resources |
+| Prepare | Lets the user select fixed questions for a healthcare conversation |
+| Carry | Provides a print view with the educational-use notice |
+| Reset | Clears selections without retaining a health profile |
+
+The dashboard is connected to actual Python inference. The model ranks
+educational catalog entries; it never predicts a health outcome.
+
+### Design choices that matter
+
+- **Preparation, not diagnosis.** No symptom collection, triage or treatment generation.
+- **Bounded content.** Outputs come from a fixed catalog, not generated medical advice.
+- **Local-first execution.** No external model service, patient database or API key.
+- **Human care stays central.** Questions support a professional conversation, not replace it.
+
+**Current release:** a working local research prototype with synthetic personas
+and demonstration content. It has not undergone clinical review or patient
+evaluation and does not provide individualized care or determine whether anyone
+is safe.
 
 ## Run locally
 
@@ -83,7 +133,7 @@ The server binds only to `127.0.0.1`, validates Host and browser Origin, provide
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 
-## Safety-reviewed product roadmap
+## From working core to an accessible care-preparation layer
 
 These are proposed review gates, **not completed safety reviews**:
 
