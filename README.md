@@ -58,6 +58,13 @@ is safe.
 
 ## Run locally
 
+Clone the standalone project:
+
+```powershell
+git clone https://github.com/Emutisya/maternity-health-copilot.git
+Set-Location maternity-health-copilot
+```
+
 Python 3.10+ is the only runtime requirement. No installs, API keys, network calls, downloaded weights or CDNs are needed. From this directory in PowerShell:
 
 ```powershell
@@ -76,6 +83,21 @@ python -m unittest discover -s tests -v
 ```
 
 The packaged, single-file HTML has all its styles and scripts inline. Opening it directly shows the interface but cannot perform inference: serve it through Python. Synthetic presets, bounded topic/preferences, resource cards, selected appointment questions and an optional print view are available. Changing selections clears old matches. Refresh/reset clears the question list; no browser storage is used.
+
+### Run alongside the other projects
+
+All four projects default to port 8765. Use a separate terminal and port 8768
+for this dashboard when running the collection together:
+
+```powershell
+python -m maternity_copilot serve --port 8768
+```
+
+Open **http://127.0.0.1:8768**; `/api/health` reports model readiness. Keep MCP
+Shield on 8765, the Guardian on 8766, and Fursa on 8767. Alternatively,
+`--port 0` selects an available port and prints its URL. Ports outside 0 through
+65535 are rejected before model loading. If a port is occupied, choose another
+rather than stopping an unrelated process.
 
 ## Safety and scope
 
