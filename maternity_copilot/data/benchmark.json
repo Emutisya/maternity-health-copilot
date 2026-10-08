@@ -1,0 +1,18 @@
+{
+  "development": [
+    {"stage":"pregnancy","topic":"appointments","format":"guide","focus":"planning","relevant":["appointments-guide"]},
+    {"stage":"postpartum","topic":"support","format":"guide","focus":"support","relevant":["support-guide","support-checklist"]},
+    {"stage":"pregnancy","topic":"wellbeing","format":"checklist","focus":"planning","relevant":["wellbeing-guide","wellbeing-checklist"]},
+    {"stage":"postpartum","topic":"feeding","format":"checklist","focus":"planning","relevant":["feeding-guide","feeding-checklist"]},
+    {"stage":"pregnancy","topic":"access","format":"guide","focus":"support","relevant":["access-guide","access-checklist"]},
+    {"stage":"postpartum","topic":"care_team","format":"guide","focus":"support","relevant":["care-team-guide","care-team-checklist"]}
+  ],
+  "held_out": [
+    {"stage":"postpartum","topic":"appointments","format":"checklist","focus":"planning","relevant":["appointments-checklist"]},
+    {"stage":"pregnancy","topic":"support","format":"checklist","focus":"planning","relevant":["support-guide","support-checklist"]},
+    {"stage":"postpartum","topic":"wellbeing","format":"guide","focus":"support","relevant":["wellbeing-guide","wellbeing-checklist"]},
+    {"stage":"pregnancy","topic":"feeding","format":"guide","focus":"support","relevant":["feeding-guide","feeding-checklist"]},
+    {"stage":"postpartum","topic":"access","format":"checklist","focus":"planning","relevant":["access-guide","access-checklist"]},
+    {"stage":"pregnancy","topic":"care_team","format":"checklist","focus":"planning","relevant":["care-team-guide","care-team-checklist"]}
+  ]
+}

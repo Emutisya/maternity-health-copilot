@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maternity Health Copilot · Educational prototype</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--cp-bg); color: var(--cp-text); font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.55; }
+.banner { position: sticky; top: 0; z-index: 2; background: var(--cp-surface); border-bottom: 2px solid var(--cp-accent); padding: 12px 24px; font-size: .875rem; }
+.banner strong { color: var(--cp-accent); }
+main { max-width: 1240px; padding: 40px 24px; margin: auto; }
+.eyebrow { color: var(--cp-accent); font-weight: 700; letter-spacing: .12em; font-size: .75rem; text-transform: uppercase; }
+h1 { font-size: clamp(2rem, 4vw, 3.2rem); letter-spacing: -.04em; line-height: 1.15; margin: 12px 0; }
+h2 { font-size: 1.25rem; margin: 0 0 12px; }
+h3 { font-size: 1.1rem; line-height: 1.4; margin: 12px 0; }
+p { margin: 8px 0 16px; }
+.intro { max-width: 760px; color: var(--cp-text-muted); }
+.pill { display: inline-block; background: var(--cp-accent-soft); color: var(--cp-accent); border: 1px solid var(--cp-border); border-radius: .625rem; padding: 4px 8px; font-size: .75rem; font-weight: 600; margin-right: 8px; }
+.layout { display: grid; grid-template-columns: 320px minmax(0,1fr); gap: 24px; margin-top: 32px; align-items: start; }
+.panel, .card { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; padding: 24px; }
+.panel p, .card p, small { color: var(--cp-text-muted); }
+label { display: block; font-weight: 600; font-size: .875rem; margin: 16px 0 4px; }
+select, button { font: inherit; border-radius: .625rem; padding: 10px 12px; border: 1px solid var(--cp-border-strong); }
+select { width: 100%; background: var(--cp-bg-elevated); color: var(--cp-text); }
+button { cursor: pointer; color: var(--cp-accent-fg); background: var(--cp-accent); border-color: var(--cp-accent); font-weight: 600; }
+button:hover { background: var(--cp-accent-hover); }
+button.secondary { background: var(--cp-surface); color: var(--cp-text); border-color: var(--cp-border-strong); }
+button:disabled { opacity: .6; cursor: not-allowed; }
+:focus-visible { outline: 3px solid var(--cp-link); outline-offset: 3px; }
+.wide { width: 100%; margin-top: 24px; }
+.results-header { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+#status { color: var(--cp-text-muted); min-height: 28px; }
+#cards { display: grid; gap: 16px; margin: 16px 0 24px; }
+.card .meta { display: flex; justify-content: space-between; gap: 8px; color: var(--cp-text-soft); font-size: .8rem; }
+.question { display: flex; gap: 12px; align-items: start; font-weight: 400; }
+input[type=checkbox] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--cp-accent); margin-top: 3px; }
+.empty { border: 1px dashed var(--cp-border-strong); background: var(--cp-bg-elevated); border-radius: 16px; padding: 32px; color: var(--cp-text-muted); }
+.note { border-left: 3px solid var(--cp-accent); padding: 8px 16px; background: var(--cp-accent-soft); font-size: .875rem; margin-top: 20px; }
+footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 20px; color: var(--cp-text-muted); font-size: .875rem; }
+#question-list { padding-left: 24px; }
+@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } main { padding: 24px 16px; } .banner { position: static; } }
+@media print {
+  .banner { position: static; }
+  main { padding: 16px; }
+  .intro, .eyebrow, .layout > aside, .results-header, #cards, #status, .note, .no-print, footer { display: none; }
+  .layout { display: block; margin: 16px 0; }
+  .panel { border: none; padding: 0; }
+  h1 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+<div class="banner" role="note"><strong>Not medical advice.</strong> For symptoms or concerns, contact a qualified healthcare professional. If you think there is an emergency, contact local emergency services.</div>
+<main>
+  <div class="eyebrow">AI for Health / Education only</div>
+  <h1>Maternity Health Copilot</h1>
+  <p class="intro">Find conversation starters, not clinical answers. Explore a synthetic educational catalog and prepare questions to discuss with a qualified healthcare professional.</p>
+  <div class="no-print"><span class="pill">Research prototype</span><span class="pill">Synthetic personas &amp; resources</span><span class="pill">Local TF-IDF retrieval</span></div>
+  <div class="layout">
+    <aside class="panel">
+      <h2>01 / Explore a demo</h2>
+      <p>No personal details. Choose only fictional demonstration preferences.</p>
+      <label for="preset">Synthetic preset</label>
+      <select id="preset">
+        <option value="custom">Custom synthetic scenario</option>
+        <option value="appointment">Demo A · Pregnancy appointment</option>
+        <option value="access">Demo B · Postpartum access</option>
+        <option value="support">Demo C · Support conversation</option>
+      </select>
+      <form id="preferences">
+        <label for="stage">Demo stage</label>
+        <select id="stage"><option value="pregnancy">Pregnancy</option><option value="postpartum">Postpartum</option></select>
+        <label for="topic">Educational topic</label>
+        <select id="topic"><option value="appointments">Appointment preparation</option><option value="support">Support networks</option><option value="wellbeing">Wellbeing conversations</option><option value="feeding">Finding feeding information</option><option value="access">Language &amp; service access</option><option value="care_team">Care team communication</option></select>
+        <label for="format">Preferred format</label>
+        <select id="format"><option value="guide">Conversation guide</option><option value="checklist">Question checklist</option></select>
+        <label for="focus">Preferred focus</label>
+        <select id="focus"><option value="planning">Appointment planning</option><option value="support">Support information</option></select>
+        <button class="wide" id="match" type="submit">Find educational resources</button>
+      </form>
+      <div class="note">This is not symptom screening, diagnosis, triage or treatment. Nothing here assesses whether you are safe. Do not enter real health information.</div>
+    </aside>
+    <section aria-label="Educational resources and question planner">
+      <div class="results-header"><div><h2>02 / Explore resources</h2><small>Ranked by learned text similarity, not medical relevance.</small></div><span class="pill">12 synthetic resources</span></div>
+      <p id="status" role="status" aria-live="polite">Choose a demo and find resources to begin.</p>
+      <div id="cards"><div class="empty">Your educational conversation starters will appear here. No information is sent outside the local Python backend.</div></div>
+      <section class="panel" aria-labelledby="planner-title">
+        <h2 id="planner-title">03 / Appointment question list</h2>
+        <p class="no-print">Select questions from the resource cards. This list exists only in this page's memory and is cleared on refresh. Printing creates a copy you control.</p>
+        <p>Synthetic discussion prompts only. A qualified professional should guide any care decisions.</p>
+        <ol id="question-list"></ol>
+        <p id="empty-list">No questions selected yet.</p>
+        <button id="print" class="secondary no-print" type="button" disabled>Print question list</button>
+        <button id="clear" class="secondary no-print" type="button">Reset demo</button>
+      </section>
+    </section>
+  </div>
+  <footer>No clinical guidelines, real patient records, external models, accounts or tracking. Scores are retrieval similarities, not probabilities, risk scores or evidence of safety. Educational content is authored for demonstration and has not been clinically reviewed.</footer>
+</main>
+<script>
+const fields = ["stage", "topic", "format", "focus"];
+const selected = new Set();
+const status = document.getElementById("status");
+const cards = document.getElementById("cards");
+const presets = {
+  appointment: ["pregnancy", "appointments", "guide", "planning"],
+  access: ["postpartum", "access", "checklist", "planning"],
+  support: ["postpartum", "support", "guide", "support"]
+};
+let generation = 0;
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+function updateQuestions() {
+  const list = document.getElementById("question-list");
+  list.replaceChildren(...Array.from(selected, question => element("li", question)));
+  document.getElementById("empty-list").hidden = selected.size > 0;
+  document.getElementById("print").disabled = selected.size === 0;
+}
+function invalidate() {
+  generation++;
+  selected.clear();
+  updateQuestions();
+  cards.replaceChildren(element("div", "Demo selections changed. Find resources to update this view.", "empty"));
+  status.textContent = "Ready for a new synthetic resource search.";
+  document.getElementById("match").disabled = false;
+}
+document.getElementById("preset").addEventListener("change", event => {
+  const values = presets[event.target.value];
+  if (values) fields.forEach((key, index) => document.getElementById(key).value = values[index]);
+  invalidate();
+});
+fields.forEach(key => document.getElementById(key).addEventListener("change", () => {
+  document.getElementById("preset").value = "custom";
+  invalidate();
+}));
+document.getElementById("preferences").addEventListener("submit", async event => {
+  event.preventDefault();
+  invalidate();
+  const version = generation;
+  const button = document.getElementById("match");
+  button.disabled = true;
+  status.textContent = "Matching against the local synthetic catalog…";
+  const request = Object.fromEntries(fields.map(key => [key, document.getElementById(key).value]));
+  try {
+    if (location.protocol === "file:") throw new Error("Open this dashboard through the Python server at http://127.0.0.1:8765, not as a local file.");
+    const response = await fetch("/api/resources", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(request), cache: "no-store"
+    });
+    if (!response.ok) throw new Error("The local backend rejected the request. Check that the model is trained and the demo selections are valid.");
+    const data = await response.json();
+    if (version !== generation) return;
+    cards.replaceChildren();
+    data.resources.forEach(resource => {
+      const card = element("article", undefined, "card");
+      card.append(element("div", `SYNTHETIC · ${resource.format} / Similarity ${resource.retrieval_score.toFixed(3)}`, "meta"),
+        element("h3", resource.title), element("p", resource.summary));
+      resource.questions.forEach(question => {
+        const label = element("label", undefined, "question");
+        const checkbox = element("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = selected.has(question);
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) selected.add(question); else selected.delete(question);
+          cards.querySelectorAll("input").forEach(input => { input.checked = selected.has(input.dataset.question); });
+          updateQuestions();
+        });
+        checkbox.dataset.question = question;
+        label.append(checkbox, element("span", question));
+        card.append(label);
+      });
+      cards.append(card);
+    });
+    status.textContent = `${data.resources.length} educational resources matched. Similarity is not risk, confidence or probability.`;
+  } catch (error) {
+    if (version === generation) {
+      status.textContent = error.message || "Local backend unavailable. Start the Python server and try again.";
+      cards.replaceChildren(element("div", "No resources loaded. No clinical conclusions can be drawn.", "empty"));
+    }
+  } finally {
+    if (version === generation) button.disabled = false;
+  }
+});
+document.getElementById("print").addEventListener("click", () => window.print());
+document.getElementById("clear").addEventListener("click", () => {
+  document.getElementById("preferences").reset();
+  document.getElementById("preset").value = "custom";
+  invalidate();
+});
+</script>
+</body>
+</html>
