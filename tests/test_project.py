@@ -1,6 +1,8 @@
 import itertools
 import json
 import shutil
+import subprocess
+import sys
 import threading
 import unittest
 import uuid
@@ -45,6 +47,21 @@ class ProjectTests(unittest.TestCase):
         (self.workspace / "old.json").write_text(json.dumps(changed), encoding="utf-8")
         with self.assertRaises(ValueError):
             load_model(self.workspace / "old.json")
+
+    def test_invalid_port_precedes_model_loading(self):
+        for port in ("-1", "65536", "999999999999999999999"):
+            with self.subTest(port=port):
+                result = subprocess.run(
+                    [sys.executable, "-m", "maternity_copilot",
+                     "--model", "models/missing-port-test.json", "serve", "--port", port],
+                    cwd=Path(__file__).resolve().parents[1],
+                    text=True, capture_output=True, timeout=10,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("--port must be between 0 and 65535", result.stderr)
+                self.assertIn("use 0 to choose an available port", result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                self.assertEqual(result.stdout, "")
 
     def test_relevance_and_stage(self):
         for stage, expected in [("pregnancy", "appointments-guide"),
