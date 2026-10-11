@@ -119,6 +119,27 @@ def sweep(model, k=3):
             "meaning": "Exhaustive metadata stress check; labels are derived from this catalog, not independent evaluation."}
 
 
+def sensitivity(model, request, field):
+    limit = validate(request)
+    if field not in OPTIONS:
+        raise ValueError("Sensitivity varies only one documented selection field.")
+    rows = model_catalog(model)
+    base = [row["id"] for _, row in _rank_rows(model, request, rows)[:limit]]
+    variants = []
+    for value in OPTIONS[field]:
+        changed = {**request, field: value}
+        ids = [row["id"] for _, row in _rank_rows(model, changed, rows)[:limit]]
+        variants.append({"value": value, "ranked": ids,
+                         "retained": sorted(set(base) & set(ids)),
+                         "entered": sorted(set(ids) - set(base)), "left": sorted(set(base) - set(ids)),
+                         "rank_shifts": {identifier: base.index(identifier) - ids.index(identifier)
+                                         for identifier in sorted(set(base) & set(ids))}})
+    return {"notice": BANNER, "synthetic_catalog": True,
+            "catalog_sha256": fingerprint(rows), "request": dict(request),
+            "field": field, "baseline_ranked": base, "variants": variants,
+            "meaning": "One-selection lexical sensitivity; positive shifts mean earlier rank, not better care."}
+
+
 def read_report(path):
     raw = Path(path).read_bytes()
     if len(raw) > 2_000_000:

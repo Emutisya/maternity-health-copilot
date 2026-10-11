@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
-from .audit import browse, compare_reports, coverage, explain, inspect_model, sweep
+from .audit import browse, compare_reports, coverage, explain, inspect_model, sensitivity, sweep
 
 
 def main():
@@ -28,10 +28,13 @@ def main():
     evaluation.add_argument("--split", choices=["development", "held_out"], default="held_out")
     evaluation.add_argument("--k", type=int, choices=range(1, 7), default=3)
     evaluation.add_argument("--output", help="Atomically save a reproducible JSON report.")
-    for command in ("match", "explain"):
+    for command in ("match", "explain", "sensitivity"):
         matching = commands.add_parser(command)
         for key, values in OPTIONS.items():
             matching.add_argument("--" + key, choices=values, required=True)
+        if command == "sensitivity":
+            matching.add_argument("--field", choices=list(OPTIONS), required=True)
+            matching.add_argument("--limit", type=int, choices=range(1, 7), default=3)
     serving = commands.add_parser("serve")
     serving.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
@@ -71,6 +74,9 @@ def main():
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":
             print(json.dumps(explain(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
+        elif args.command == "sensitivity":
+            request = {key: getattr(args, key) for key in OPTIONS}
+            print(json.dumps(sensitivity(model, {**request, "limit": args.limit}, args.field), indent=2))
         else:
             try:
                 server = make_server(model, args.port)

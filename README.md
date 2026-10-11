@@ -214,6 +214,11 @@ reports recall and top-result format/focus/topic match counts. This is a
 metadata stress check, **not a new independent benchmark or held-out result**;
 derived labels cannot establish generalization, safety or clinical usefulness.
 
+`sensitivity` takes the four required selections plus `--field stage` (or
+topic/format/focus) and optional `--limit 1..6`. It varies only that enum, reports
+top-list entries/exits and retained rank shifts. It performs no free-text
+perturbation, medical counterfactual or care recommendation.
+
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 
 ## From working core to an accessible care-preparation layer

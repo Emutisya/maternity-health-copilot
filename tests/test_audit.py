@@ -7,10 +7,22 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sweep
+from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sensitivity, sweep
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_sensitivity_changes_only_one_enum_and_exposes_stage_exclusion(self):
+        model = fitted_model(catalog())
+        request = {"stage": "pregnancy", "topic": "appointments", "format": "guide", "focus": "planning"}
+        report = sensitivity(model, request, "stage")
+        self.assertEqual(report["variants"][0]["ranked"], report["baseline_ranked"])
+        changed = report["variants"][1]
+        self.assertIn("appointments-guide", changed["left"])
+        self.assertIn("appointments-checklist", changed["entered"])
+        self.assertEqual(request["stage"], "pregnancy")
+        with self.assertRaises(ValueError):
+            sensitivity(model, request, "symptoms")
+
     def test_exhaustive_sweep_reconciles_metadata_labels_and_preference_counts(self):
         report = sweep(fitted_model(catalog()), k=1)
         self.assertEqual(report["queries"], 48)
