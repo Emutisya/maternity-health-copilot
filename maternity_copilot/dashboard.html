@@ -144,7 +144,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
     <section aria-label="Educational resources and question planner">
       <div class="results-header"><div><h2>02 / Explore resources</h2><small>Ranked by learned text similarity, not medical relevance.</small></div><span class="pill">12 synthetic resources</span></div>
       <p id="status" role="status" aria-live="polite">Choose a demo and find resources to begin.</p>
-      <div id="cards"><div class="empty">Your educational conversation starters will appear here. No information is sent outside the local Python backend.</div></div>
+      <div id="cards" aria-busy="false"><div class="empty">Your educational conversation starters will appear here. No information is sent outside the local Python backend.</div></div>
       <section class="panel" aria-labelledby="planner-title">
         <h2 id="planner-title">03 / Appointment question list</h2>
         <p class="no-print">Select questions from the resource cards. This list exists only in this page's memory and is cleared on refresh. Printing creates a copy you control.</p>
@@ -169,6 +169,7 @@ const presets = {
   support: ["postpartum", "support", "guide", "support"]
 };
 let generation = 0;
+let pending = null;
 function element(tag, text, className) {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -183,6 +184,9 @@ function updateQuestions() {
 }
 function invalidate() {
   generation++;
+  if (pending) pending.abort();
+  pending = null;
+  cards.setAttribute("aria-busy", "false");
   selected.clear();
   updateQuestions();
   cards.replaceChildren(element("div", "Demo selections changed. Find resources to update this view.", "empty"));
@@ -204,13 +208,16 @@ document.getElementById("preferences").addEventListener("submit", async event =>
   const version = generation;
   const button = document.getElementById("match");
   button.disabled = true;
+  cards.setAttribute("aria-busy", "true");
   status.textContent = "Matching against the local synthetic catalog…";
   const request = Object.fromEntries(fields.map(key => [key, document.getElementById(key).value]));
   try {
     if (location.protocol === "file:") throw new Error("Open this dashboard through the Python server at http://127.0.0.1:8765, not as a local file.");
+    pending = new AbortController();
     const response = await fetch("/api/resources", {
       method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(request), cache: "no-store"
+      body: JSON.stringify(request), cache: "no-store",
+      signal: AbortSignal.any([pending.signal, AbortSignal.timeout(10000)])
     });
     if (!response.ok) throw new Error("The local backend rejected the request. Check that the model is trained and the demo selections are valid.");
     const data = await response.json();
@@ -239,11 +246,15 @@ document.getElementById("preferences").addEventListener("submit", async event =>
     status.textContent = `${data.resources.length} educational resources matched. Similarity is not risk, confidence or probability.`;
   } catch (error) {
     if (version === generation) {
-      status.textContent = error.message || "Local backend unavailable. Start the Python server and try again.";
+      status.textContent = error.name === "TimeoutError" ? "The local request timed out. Check the Python server and try again." : error.message || "Local backend unavailable. Start the Python server and try again.";
       cards.replaceChildren(element("div", "No resources loaded. No clinical conclusions can be drawn.", "empty"));
     }
   } finally {
-    if (version === generation) button.disabled = false;
+    if (version === generation) {
+      button.disabled = false;
+      pending = null;
+      cards.setAttribute("aria-busy", "false");
+    }
   }
 });
 document.getElementById("print").addEventListener("click", () => window.print());
@@ -252,6 +263,7 @@ document.getElementById("clear").addEventListener("click", () => {
   document.getElementById("preset").value = "custom";
   invalidate();
 });
+window.addEventListener("pagehide", invalidate);
 </script>
 </body>
 </html>

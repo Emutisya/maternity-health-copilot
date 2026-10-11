@@ -1,5 +1,6 @@
 import copy
 import itertools
+from http.client import HTTPConnection
 import json
 import shutil
 import subprocess
@@ -177,6 +178,20 @@ class ProjectTests(unittest.TestCase):
             self.assertNotIn("textarea", html)
         with urlopen(self.base + "/api/health", timeout=5) as response:
             self.assertEqual(json.load(response)["status"], "ready")
+
+    def test_stalled_request_returns_timeout_without_breaking_server(self):
+        connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=8)
+        try:
+            connection.request("POST", "/api/resources", "{}", {
+                "Content-Type": "application/json", "Content-Length": "100",
+            })
+            response = connection.getresponse()
+            self.assertEqual(response.status, 408)
+            self.assertEqual(json.loads(response.read())["notice"], BANNER)
+        finally:
+            connection.close()
+        with urlopen(self.base + "/api/health", timeout=5) as response:
+            self.assertEqual(response.status, 200)
 
     def test_http_invalid_inputs_and_origin(self):
         invalid = [

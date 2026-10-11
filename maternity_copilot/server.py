@@ -68,7 +68,7 @@ def make_server(model, port=8765):
                 self.send(415, {"error": "Use application/json.", "notice": BANNER})
                 return
             try:
-                if self.headers.get("Transfer-Encoding"):
+                if self.headers.get("Transfer-Encoding") is not None:
                     raise ValueError("Transfer encoding is not accepted.")
                 length = self.headers.get("Content-Length", "")
                 if (len(self.headers.get_all("Content-Length", [])) != 1
