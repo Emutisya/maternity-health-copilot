@@ -1,6 +1,8 @@
 """Fixed catalog questions for human-reviewed educational conversation planning."""
 
-from .core import BANNER, OPTIONS, catalog, fingerprint
+from pathlib import Path
+
+from .core import BANNER, OPTIONS, catalog, decode_json, fingerprint, write_json
 
 
 def make_plan(stage, identifiers):
@@ -46,4 +48,38 @@ def select_questions(stage, selections):
     for item, signature in zip(selections, signatures):
         questions.setdefault(lookup[signature], []).append(dict(item))
     plan["questions"] = [{"text": text, "sources": origins} for text, origins in questions.items()]
+    return plan
+
+
+def save_plan(path, plan):
+    selections = [dict(origin) for question in plan["questions"] for origin in question["sources"]]
+    checked = select_questions(plan["stage"], selections)
+    if plan != checked:
+        raise ValueError("Only unchanged fixed catalog question plans can be exported.")
+    capsule = {"version": 1, "notice": BANNER, "synthetic_catalog": True,
+               "human_review_required": True, "catalog_sha256": checked["catalog_sha256"],
+               "stage": checked["stage"], "selections": selections}
+    capsule["selection_sha256"] = fingerprint(capsule)
+    write_json(path, capsule)
+    return capsule
+
+
+def read_plan(path):
+    raw = Path(path).read_bytes()
+    if len(raw) > 16_384:
+        raise ValueError("Selection files must be at most 16 KB.")
+    capsule = decode_json(raw.decode("utf-8"))
+    keys = {"version", "notice", "synthetic_catalog", "human_review_required",
+            "catalog_sha256", "stage", "selections", "selection_sha256"}
+    if (not isinstance(capsule, dict) or set(capsule) != keys
+            or type(capsule["version"]) is not int or capsule["version"] != 1
+            or capsule["notice"] != BANNER or capsule["synthetic_catalog"] is not True
+            or capsule["human_review_required"] is not True):
+        raise ValueError("Use a synthetic-only fixed-question selection file.")
+    unsigned = {key: value for key, value in capsule.items() if key != "selection_sha256"}
+    if fingerprint(unsigned) != capsule["selection_sha256"]:
+        raise ValueError("Question selection integrity check failed.")
+    plan = select_questions(capsule["stage"], capsule["selections"])
+    if plan["catalog_sha256"] != capsule["catalog_sha256"]:
+        raise ValueError("The catalog changed. Review current questions and create a new selection file.")
     return plan

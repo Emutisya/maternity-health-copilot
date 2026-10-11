@@ -8,10 +8,30 @@ from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
 from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sensitivity, sweep
-from maternity_copilot.planning import make_plan, select_questions
+from maternity_copilot.planning import make_plan, read_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_portable_question_selectors_reconstruct_and_reject_edits(self):
+        directory = Path("models") / ("plan-" + uuid.uuid4().hex)
+        path = directory / "selection.json"
+        try:
+            plan = make_plan("pregnancy", ["access-guide"])
+            capsule = save_plan(path, plan)
+            self.assertNotIn("questions", capsule)
+            self.assertEqual(read_plan(path), plan)
+            capsule["selections"][0]["question_number"] = 2
+            write_json(path, capsule)
+            with self.assertRaisesRegex(ValueError, "integrity"):
+                read_plan(path)
+            capsule = save_plan(path, plan)
+            capsule["notes"] = "unbounded"
+            write_json(path, capsule)
+            with self.assertRaisesRegex(ValueError, "synthetic-only"):
+                read_plan(path)
+        finally:
+            shutil.rmtree(directory)
+
     def test_question_selection_preserves_chosen_order_without_free_text(self):
         picks = [{"resource_id": "support-guide", "question_number": 2},
                  {"resource_id": "access-guide", "question_number": 1}]
