@@ -37,10 +37,22 @@ def make_server(model, port=8765):
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
+            if status == 405:
+                self.send_header("Allow", "GET, POST")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
             self.end_headers()
-            self.wfile.write(body)
+            if self.command != "HEAD":
+                self.wfile.write(body)
+
+        def send_error(self, code, message=None, explain=None):
+            self.close_connection = True
+            if code == 501:
+                if not self.allowed():
+                    return
+                self.send(405, {"error": "Unsupported method. Use the documented GET or POST routes.", "notice": BANNER})
+            else:
+                self.send(code, {"error": "Invalid HTTP request. Use the documented loopback interface.", "notice": BANNER})
 
         def allowed(self):
             expected = f"127.0.0.1:{self.server.server_port}"

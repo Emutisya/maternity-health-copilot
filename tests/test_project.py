@@ -312,6 +312,24 @@ class ProjectTests(unittest.TestCase):
         with urlopen(self.base + "/api/health", timeout=5) as response:
             self.assertEqual(response.status, 200)
 
+    def test_unsupported_methods_return_nonreflective_json_and_correct_head_framing(self):
+        for method in ("OPTIONS", "DELETE", "PATCH", "PERSONAL_VALUE", "HEAD"):
+            connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+            try:
+                connection.request(method, "/api/health")
+                response = connection.getresponse()
+                self.assertEqual(response.status, 405)
+                self.assertEqual(response.headers["Allow"], "GET, POST")
+                body = response.read()
+                if method == "HEAD":
+                    self.assertEqual(body, b"")
+                    self.assertGreater(int(response.headers["Content-Length"]), 0)
+                else:
+                    self.assertEqual(json.loads(body)["notice"], BANNER)
+                    self.assertNotIn(b"PERSONAL_VALUE", body)
+            finally:
+                connection.close()
+
     def test_stalled_request_returns_timeout_without_breaking_server(self):
         connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=8)
         try:

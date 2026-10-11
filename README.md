@@ -137,6 +137,9 @@ Duplicate Host, Origin and Content-Type headers are rejected rather than
 interpreting only the first value. JSON media-type matching is case-insensitive. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 GET targets must be origin-form paths; absolute URLs, network-path targets and
 fragments return bounded JSON errors rather than aliasing the dashboard. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
+Unsupported methods return 405 with `Allow: GET, POST` and a nonreflective
+JSON error. HEAD error responses omit the body while retaining its length;
+HTTP parser failures also use the educational JSON error envelope. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 
 ## Model card
 
