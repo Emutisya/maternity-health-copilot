@@ -154,6 +154,11 @@ No model is loaded and no similarity or clinical relevance is implied.
 access-checklist` presents two to four unique eligible resources in chosen
 order, exact metadata contrasts and shared fixed questions. It needs no model
 and requires human review; it never declares one resource clinically superior.
+`related --stage pregnancy --resource access-guide --limit 3` uses fitted
+document-to-document cosine similarity to explore other eligible catalog
+entries. It excludes the source and incompatible stages and uses full
+precision plus stable IDs for ordering. It is lexical browsing, not a care
+pathway or a recommendation to undertake any treatment.
 
 `python -m maternity_copilot inspect` validates a fitted artifact and reports
 per-document sparsity/norms, a byte-level artifact hash and a canonical

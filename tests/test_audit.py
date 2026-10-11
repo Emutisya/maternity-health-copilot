@@ -11,11 +11,23 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, read_report, sensitivity, sweep
+from maternity_copilot.audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_related_resources_exclude_self_and_incompatible_stage(self):
+        model = fitted_model(catalog())
+        result = related_resources(model, "pregnancy", "access-guide", 6)
+        ids = [row["id"] for row in result["resources"]]
+        self.assertNotIn("access-guide", ids)
+        self.assertNotIn("appointments-checklist", ids)
+        scores = [row["retrieval_score"] for row in result["resources"]]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+        self.assertEqual(result, related_resources(model, "pregnancy", "access-guide", 6))
+        with self.assertRaises(ValueError):
+            related_resources(model, "pregnancy", "appointments-checklist")
+
     def test_resource_comparison_preserves_chosen_order_and_exact_contrasts(self):
         ids = ["access-guide", "access-checklist"]
         result = compare_resources("pregnancy", ids)

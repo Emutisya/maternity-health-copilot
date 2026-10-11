@@ -48,6 +48,28 @@ def compare_resources(stage, identifiers):
             "meaning": "Fixed content comparison in chosen order; no clinical superiority or recommendation."}
 
 
+def related_resources(model, stage, identifier, limit=3):
+    if stage not in OPTIONS["stage"] or type(limit) is not int or not 1 <= limit <= 6:
+        raise ValueError("Related resources use a supported stage and limit 1–6.")
+    rows = model_catalog(model)
+    source = next((row for row in rows if row["id"] == identifier and stage in row["stages"]), None)
+    if source is None:
+        raise ValueError("Choose a catalog resource compatible with the selected stage.")
+    query = model["vectors"][identifier]
+    candidates = []
+    for row in rows:
+        if row["id"] == identifier or stage not in row["stages"]:
+            continue
+        score = sum(value * model["vectors"][row["id"]].get(term, 0) for term, value in query.items())
+        candidates.append((score, row))
+    candidates.sort(key=lambda item: (-item[0], item[1]["id"]))
+    return {"notice": BANNER, "synthetic_catalog": True, "catalog_sha256": fingerprint(rows),
+            "source_id": identifier, "stage": stage,
+            "resources": [{**row, "retrieval_score": round(score, 6)}
+                          for score, row in candidates[:limit]],
+            "meaning": "Document-to-document lexical similarity only, not a suggested care pathway."}
+
+
 def inspect_model(path):
     model, artifact_sha256 = load_model_snapshot(path)
     documents = [{"id": identifier, "nonzero_terms": len(weights),

@@ -5,7 +5,7 @@ from pathlib import Path
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
-from .audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, sensitivity, sweep
+from .audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep
 
 
 def main():
@@ -18,6 +18,10 @@ def main():
     resource_comparison = commands.add_parser("compare-resources")
     resource_comparison.add_argument("--stage", choices=OPTIONS["stage"], required=True)
     resource_comparison.add_argument("--resource", action="append", required=True)
+    related = commands.add_parser("related")
+    related.add_argument("--stage", choices=OPTIONS["stage"], required=True)
+    related.add_argument("--resource", required=True)
+    related.add_argument("--limit", type=int, choices=range(1, 7), default=3)
     planning = commands.add_parser("plan")
     planning.add_argument("--stage", choices=OPTIONS["stage"], required=True)
     planning.add_argument("--output", help="Save synthetic fixed-question selectors, not free text.")
@@ -119,6 +123,8 @@ def main():
             print(json.dumps(grouped_evaluation(model, args.split, args.k, args.by), indent=2))
         elif args.command == "evaluate-curve":
             print(json.dumps(cutoff_curve(model, args.split), indent=2))
+        elif args.command == "related":
+            print(json.dumps(related_resources(model, args.stage, args.resource, args.limit), indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":
