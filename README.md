@@ -207,7 +207,7 @@ These are local prototype resource bounds, not protection for public hosting.
 
 `maternity_copilot\data\catalog.json` contains 12 original synthetic descriptions, two per topic, and fixed appointment questions. Nothing is extracted from patient records, external clinical guidelines or copyrighted clinical material. Synthetic presets carry no real-person attributes.
 
-`maternity_copilot\data\benchmark.json` contains six development and six held-out selection combinations, disjoint across splits. Binary relevance labels identify same-topic, stage-compatible resources. Format and focus preferences affect the rank, but the relevance labels do not measure preference satisfaction. There are no training query examples: this is **unsupervised catalog fitting**, not supervised prediction. Candidate documents necessarily remain in the retrieval index during evaluation. That is normal retrieval evaluation, not duplicate train/test query leakage.
+`maternity_copilot\data\benchmark.json` contains twelve development and six held-out selection combinations, disjoint across splits. Binary relevance labels identify same-topic, stage-compatible resources. Format and focus preferences affect the rank, but the relevance labels do not measure preference satisfaction. There are no training query examples: this is **unsupervised catalog fitting**, not supervised prediction. Candidate documents necessarily remain in the retrieval index during evaluation. That is normal retrieval evaluation, not duplicate train/test query leakage.
 
 `evaluate` calculates macro recall@k, binary nDCG@k and truncated MRR@k from actual rankings. It validates unique query combinations and stage-compatible labels. No score is prefilled or claimed here: run the command to obtain reproducible local numbers. These tiny, authored cases have direct metadata overlap and may give very high scores; that does not demonstrate real-user usefulness, robustness, generalization, safety or clinical outcomes. Held-out means query selections excluded from fitting/development cases, not independent patients or topics. Once inspected, this bundled split is no longer an untouched test set for future tuning. Any changed ranking should receive a new independent benchmark.
 
@@ -248,7 +248,7 @@ and ranking still uses full precision. Overflowing JSON exponents such as
 `1e999` are rejected as nonfinite, not silently accepted as infinity.
 
 `coverage` needs no model: it audits the 48 possible bounded selections against
-the 12 authored benchmark cases, lists unrepresented combinations, counts
+the 18 authored benchmark cases, lists unrepresented combinations, counts
 relevance labels per resource and reports stage/topic content gaps. Coverage
 here means schema/catalog coverage, never population or clinical coverage.
 
@@ -257,6 +257,10 @@ snapshot. It derives same-topic, stage-compatible labels from metadata and
 reports recall and top-result format/focus/topic match counts. This is a
 metadata stress check, **not a new independent benchmark or held-out result**;
 derived labels cannot establish generalization, safety or clinical usefulness.
+Six added development cases include conflicting format/focus preferences and
+an appointment format unavailable for the selected stage. Labels remain
+same-topic eligible IDs, not preference or clinical judgments; the original
+six held-out cases were not changed or promoted into development.
 
 `sensitivity` takes the four required selections plus `--field stage` (or
 topic/format/focus) and optional `--limit 1..6`. It varies only that enum, reports

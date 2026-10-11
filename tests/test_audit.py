@@ -17,6 +17,16 @@ from maternity_copilot.planning import make_plan, read_plan, render_plan, save_p
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_development_benchmark_includes_unavailable_format_and_conflicting_focus(self):
+        report = evaluate(fitted_model(catalog()), split="development")
+        unavailable = next(case for case in report["cases"]
+                           if case["request"]["topic"] == "appointments"
+                           and case["request"]["format"] == "checklist")
+        self.assertEqual(unavailable["relevant"], ["appointments-guide"])
+        self.assertNotIn("appointments-checklist", unavailable["ranked"])
+        self.assertEqual(report["queries"], 12)
+        self.assertEqual(len(load_benchmark()["held_out"]), 6)
+
     def test_overflowing_json_literals_and_material_metric_drift_are_not_accepted(self):
         for text in ('{"x":1e999}', '{"x":-1e999}'):
             with self.assertRaises(ValueError):
@@ -253,9 +263,9 @@ class CatalogBoundaryTests(unittest.TestCase):
         report = coverage()
         self.assertEqual(report["possible_queries"], 48)
         self.assertEqual(report["benchmark_queries"] + len(report["unrepresented_queries"]), 48)
-        self.assertEqual(len({tuple(case.values()) for case in report["unrepresented_queries"]}), 36)
+        self.assertEqual(len({tuple(case.values()) for case in report["unrepresented_queries"]}), 30)
         self.assertTrue(all(cell["resource_ids"] for cell in report["stage_topic_cells"]))
-        self.assertEqual(sum(report["selection_counts"]["stage"].values()), 12)
+        self.assertEqual(sum(report["selection_counts"]["stage"].values()), 18)
         self.assertTrue(all(count > 0 for count in report["relevance_label_counts"].values()))
 
     def test_saved_report_comparison_rejects_forged_metrics_and_mismatched_k(self):
