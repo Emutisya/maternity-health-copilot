@@ -33,7 +33,11 @@ def main():
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         else:
-            with make_server(model, args.port) as server:
+            try:
+                server = make_server(model, args.port)
+            except OSError:
+                parser.exit(2, f"Error: Could not start the educational dashboard on port {args.port}. Choose another --port or use --port 0 for an available port.\n")
+            with server:
                 print(f"Educational prototype: http://127.0.0.1:{server.server_port}", flush=True)
                 try:
                     server.serve_forever()

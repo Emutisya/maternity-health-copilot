@@ -4,6 +4,7 @@ from http.client import HTTPConnection
 import json
 import shutil
 import subprocess
+import socket
 import sys
 import threading
 import unittest
@@ -65,6 +66,21 @@ class ProjectTests(unittest.TestCase):
                 self.assertIn("use 0 to choose an available port", result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
                 self.assertEqual(result.stdout, "")
+
+    def test_cli_occupied_port_has_actionable_recovery(self):
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            listener.listen()
+            port = listener.getsockname()[1]
+            result = subprocess.run(
+                [sys.executable, "-m", "maternity_copilot", "--model", str(self.path),
+                 "serve", "--port", str(port)], text=True, capture_output=True, timeout=10,
+            )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(f"port {port}", result.stderr)
+        self.assertIn("--port 0", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertEqual(result.stdout, "")
 
     def test_corrupt_model_weights_are_rejected(self):
         for mutate in (
