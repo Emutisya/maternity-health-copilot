@@ -109,6 +109,21 @@ async function main() {
       await evaluate("document.querySelector('nav a[href=\"#planner-title\"]').focus()");
       await call("Input.dispatchKeyEvent", {type: "keyDown", key: "Enter", code: "Enter", text: "\r", windowsVirtualKeyCode: 13});
       assert.equal(await evaluate("document.activeElement.id"), "planner-title");
+    } else if (scenario === "planner") {
+      await evaluate("document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("document.querySelectorAll('#cards input')[0].click(); document.querySelectorAll('#cards input')[1].click()");
+      assert.equal(await evaluate("document.querySelectorAll('#question-list li').length"), 2);
+      await evaluate("document.querySelector('#question-list button').click()");
+      assert.equal(await evaluate("document.querySelectorAll('#question-list li').length"), 1);
+      assert.equal(await evaluate("document.querySelectorAll('#cards input')[0].checked"), false);
+      assert.equal(await evaluate("document.querySelectorAll('#cards input')[1].checked"), true);
+      assert.equal(await evaluate("document.activeElement.closest('ol').id"), "question-list");
+      await evaluate("document.getElementById('clear-questions').click()");
+      assert.equal(await evaluate("document.querySelectorAll('#cards article').length"), 3);
+      assert.equal(await evaluate("document.querySelectorAll('#cards input:checked').length"), 0);
+      assert.equal(await evaluate("document.getElementById('print').disabled"), true);
+      assert.equal(await evaluate("document.activeElement.id"), "planner-title");
     } else {
       throw new Error("Unknown browser scenario");
     }

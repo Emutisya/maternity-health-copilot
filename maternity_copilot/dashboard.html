@@ -104,6 +104,8 @@ input[type=checkbox] { width: 18px; height: 18px; flex-shrink: 0; accent-color: 
 .note { border-left: 3px solid var(--cp-accent); padding: 8px 16px; background: var(--cp-accent-soft); font-size: .875rem; margin-top: 20px; }
 footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 20px; color: var(--cp-text-muted); font-size: .875rem; }
 #question-list { padding-left: 24px; }
+#question-list li { margin-bottom: 16px; }
+#question-list button { margin: 8px 0 0 12px; }
 @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } main { padding: 24px 16px; } .banner { position: static; } }
 @media print {
   .banner { position: static; }
@@ -159,8 +161,10 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
         <p class="no-print">Select questions from the resource cards. This list exists only in this page's memory and is cleared on refresh. Printing creates a copy you control.</p>
         <p>Synthetic discussion prompts only. A qualified professional should guide any care decisions.</p>
         <ol id="question-list"></ol>
+        <p id="planner-count" class="no-print" role="status" aria-live="polite">0 fixed questions selected.</p>
         <p id="empty-list">No questions selected yet.</p>
         <button id="print" class="secondary no-print" type="button" disabled>Print question list</button>
+        <button id="clear-questions" class="secondary no-print" type="button" disabled>Clear question list only</button>
         <button id="clear" class="secondary no-print" type="button">Reset demo</button>
       </section>
     </section>
@@ -190,12 +194,38 @@ function element(tag, text, className) {
   if (className) node.className = className;
   return node;
 }
-function updateQuestions() {
+function syncChecks() {
+  cards.querySelectorAll("input[data-question]").forEach(input => { input.checked = selected.has(input.dataset.question); });
+}
+function updateQuestions(focusIndex = null) {
   const list = document.getElementById("question-list");
-  list.replaceChildren(...Array.from(selected, question => element("li", question)));
+  list.replaceChildren(...Array.from(selected, (question, index) => {
+    const item = element("li");
+    const remove = element("button", "Remove", "secondary no-print");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove fixed question: ${question}`);
+    remove.addEventListener("click", () => {
+      selected.delete(question);
+      syncChecks();
+      updateQuestions(Math.min(index, selected.size - 1));
+    });
+    item.append(element("span", question), remove);
+    return item;
+  }));
   document.getElementById("empty-list").hidden = selected.size > 0;
   document.getElementById("print").disabled = selected.size === 0;
+  document.getElementById("clear-questions").disabled = selected.size === 0;
+  document.getElementById("planner-count").textContent = `${selected.size} fixed question${selected.size === 1 ? "" : "s"} selected.`;
+  if (focusIndex !== null) {
+    const next = list.querySelectorAll("button")[focusIndex];
+    (next || document.getElementById("planner-title")).focus();
+  }
 }
+document.getElementById("clear-questions").addEventListener("click", () => {
+  selected.clear();
+  syncChecks();
+  updateQuestions(-1);
+});
 function invalidate() {
   generation++;
   if (pending) pending.abort();
@@ -285,7 +315,7 @@ document.getElementById("preferences").addEventListener("submit", async event =>
         checkbox.checked = selected.has(question);
         checkbox.addEventListener("change", () => {
           if (checkbox.checked) selected.add(question); else selected.delete(question);
-          cards.querySelectorAll("input").forEach(input => { input.checked = selected.has(input.dataset.question); });
+          syncChecks();
           updateQuestions();
         });
         checkbox.dataset.question = question;

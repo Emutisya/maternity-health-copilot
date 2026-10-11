@@ -104,6 +104,11 @@ resource and planner headings. Keyboard-initiated searches focus the results
 heading on completion only if focus has not moved to another control; sticky
 notice spacing keeps headings visible. Browser scenario `navigation` uses
 real Enter key events to verify these focus destinations.
+Each selected question can be removed directly from the planner, synchronizing
+all matching card checkboxes and moving focus to the next retained control.
+Clear question list only preserves the current matches/preferences, unlike
+Reset demo. A live count announces list changes. Browser scenario `planner`
+verifies removal, focus, checkbox synchronization and clearing without search.
 
 ### Run alongside the other projects
 
