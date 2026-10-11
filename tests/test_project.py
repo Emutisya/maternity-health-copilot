@@ -18,7 +18,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from maternity_copilot.core import (
-    BANNER, DATA, OPTIONS, catalog, evaluate, load_model, retrieve, train, validate,
+    BANNER, DATA, OPTIONS, catalog, evaluate, fingerprint, load_model, retrieve, train, validate,
 )
 from maternity_copilot.server import make_server
 
@@ -178,6 +178,15 @@ class ProjectTests(unittest.TestCase):
                       for cases in benchmark.values() for case in cases]
         self.assertEqual(len(signatures), len(set(signatures)))
         report = evaluate(self.model, k=1)
+        self.assertEqual(report["catalog_sha256"], fingerprint(catalog()))
+        self.assertEqual(report["benchmark_sha256"], fingerprint(benchmark))
+        changed = copy.deepcopy(benchmark)
+        changed["held_out"][0]["relevant"] = [changed["held_out"][0]["relevant"][0]]
+        if changed == benchmark:
+            changed["held_out"].reverse()
+        decode = json.loads
+        with patch("maternity_copilot.core.json.loads", side_effect=lambda text: changed if "held_out" in text else decode(text)):
+            self.assertNotEqual(evaluate(self.model)["benchmark_sha256"], report["benchmark_sha256"])
         cases = benchmark["held_out"]
         expected = sum(
             int(retrieve(self.model, {key: case[key] for key in OPTIONS})["resources"][0]["id"]

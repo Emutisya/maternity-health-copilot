@@ -170,6 +170,8 @@ def evaluate(model, split="held_out", k=3):
         ndcgs.append(dcg / ideal)
         reciprocal_ranks.append(next((1 / (i + 1) for i, hit in enumerate(hits) if hit), 0))
     return {"split": split, "queries": len(recalls), "k": k,
+            "catalog_sha256": fingerprint(rows),
+            "benchmark_sha256": fingerprint(benchmark),
             "recall_at_k": sum(recalls) / len(recalls),
             "ndcg_at_k": sum(ndcgs) / len(ndcgs),
             "mrr_at_k": sum(reciprocal_ranks) / len(reciprocal_ranks),
