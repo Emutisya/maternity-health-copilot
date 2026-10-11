@@ -3,6 +3,7 @@ import json
 
 from .core import OPTIONS, evaluate, load_model, retrieve, train
 from .server import make_server
+from .audit import browse
 
 
 def main():
@@ -10,6 +11,11 @@ def main():
     parser.add_argument("--model", default="models/tfidf.json")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("train")
+    browsing = commands.add_parser("browse")
+    for key, values in OPTIONS.items():
+        browsing.add_argument("--" + key, choices=values)
+    browsing.add_argument("--offset", type=int, default=0)
+    browsing.add_argument("--limit", type=int, default=6)
     evaluation = commands.add_parser("evaluate")
     evaluation.add_argument("--split", choices=["development", "held_out"], default="held_out")
     evaluation.add_argument("--k", type=int, choices=range(1, 7), default=3)
@@ -22,6 +28,10 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "browse":
+            filters = {key: getattr(args, key) for key in OPTIONS if getattr(args, key) is not None}
+            print(json.dumps(browse(filters, args.offset, args.limit), indent=2))
+            return
         if args.command == "train":
             model = train(args.model)
             print(json.dumps({"model": args.model, "documents": len(model["vectors"]),

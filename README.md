@@ -136,6 +136,14 @@ The server binds only to `127.0.0.1`, validates Host and browser Origin, provide
 
 ## Model card
 
+### Inspect content without a model
+
+`python -m maternity_copilot browse --stage pregnancy --topic access --limit 6`
+lists the fixed catalog in resource-ID order with optional bounded filters.
+Use `--offset` and the returned `next_offset` for pagination. All filters are
+exact, unlike retrieval preferences; an empty intersection is allowed.
+No model is loaded and no similarity or clinical relevance is implied.
+
 **Model:** trainable, unsupervised TF-IDF vector-space retrieval baseline implemented in the Python standard library. It is not a generative model or a trained clinical predictor.
 
 **Fitting:** lower-case tokenization with `[a-z_]+`, document frequency learned from the 12 catalog documents, smoothed IDF `log((1+N)/(1+df))+1`, sublinear term frequency `1+log(count)`, then L2 normalization. Each document combines its title, description and explicit topic/stage/format/focus metadata. Query vectors use only bounded selections with the learned IDF. Cosine similarity ranks compatible-stage documents; ties use stable catalog IDs. No topic hard-filter disguises the learned ranking.
