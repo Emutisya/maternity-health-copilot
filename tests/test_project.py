@@ -1,3 +1,4 @@
+import copy
 import itertools
 import json
 import shutil
@@ -62,6 +63,23 @@ class ProjectTests(unittest.TestCase):
                 self.assertIn("use 0 to choose an available port", result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
                 self.assertEqual(result.stdout, "")
+
+    def test_corrupt_model_weights_are_rejected(self):
+        for mutate in (
+            lambda model: model.update(version=True),
+            lambda model: model["idf"].update({next(iter(model["idf"])): float("nan")}),
+            lambda model: model["vectors"].update({next(iter(model["vectors"])): {}}),
+        ):
+            model = copy.deepcopy(self.model)
+            mutate(model)
+            path = self.workspace / "corrupt.json"
+            path.write_text(json.dumps(model), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Run train again"):
+                load_model(path)
+        for value in ([], None):
+            path.write_text(json.dumps(value), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_model(path)
 
     def test_relevance_and_stage(self):
         for stage, expected in [("pregnancy", "appointments-guide"),

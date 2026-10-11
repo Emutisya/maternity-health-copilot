@@ -44,15 +44,18 @@ def vector(text, idf):
     return {term: value / norm for term, value in values.items()} if norm else {}
 
 
-def train(destination):
-    rows = catalog()
+def fitted_model(rows):
     texts = [document(row) for row in rows]
     frequency = Counter(term for text in texts for term in set(tokens(text)))
     idf = {term: math.log((1 + len(rows)) / (1 + count)) + 1
            for term, count in sorted(frequency.items())}
-    model = {"version": 1, "catalog_sha256": fingerprint(rows), "idf": idf,
+    return {"version": 1, "catalog_sha256": fingerprint(rows), "idf": idf,
              "vectors": {row["id"]: vector(text, idf)
                          for row, text in zip(rows, texts)}}
+
+
+def train(destination):
+    model = fitted_model(catalog())
     path = Path(destination)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(model, indent=2), encoding="utf-8")
@@ -61,10 +64,9 @@ def train(destination):
 
 def load_model(path):
     model = json.loads(Path(path).read_text(encoding="utf-8"))
-    if model.get("version") != 1 or model.get("catalog_sha256") != fingerprint(catalog()):
-        raise ValueError("Model is incompatible with this catalog. Run train again.")
-    if set(model.get("vectors", {})) != {row["id"] for row in catalog()}:
-        raise ValueError("Model is incomplete. Run train again.")
+    if (not isinstance(model, dict) or type(model.get("version")) is not int
+            or model != fitted_model(catalog())):
+        raise ValueError("Model does not match this catalog and implementation. Run train again.")
     return model
 
 
