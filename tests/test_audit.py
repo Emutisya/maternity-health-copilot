@@ -11,11 +11,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep
+from maternity_copilot.audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_baselines_expose_direct_metadata_overlap_without_inventing_learning(self):
+        model = fitted_model(catalog())
+        report = evaluate_baselines(model, k=1)
+        id_baseline, metadata = report["baselines"]
+        self.assertLess(id_baseline["metrics"]["ndcg_at_k"], metadata["metrics"]["ndcg_at_k"])
+        self.assertEqual(metadata["metrics"]["ndcg_at_k"], 1)
+        for case in id_baseline["cases"]:
+            expected = sorted(row["id"] for row in catalog() if case["request"]["stage"] in row["stages"])[:1]
+            self.assertEqual(case["ranked"], expected)
+
     def test_related_resources_exclude_self_and_incompatible_stage(self):
         model = fitted_model(catalog())
         result = related_resources(model, "pregnancy", "access-guide", 6)

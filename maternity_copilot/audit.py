@@ -215,6 +215,35 @@ def cutoff_curve(model, split="held_out"):
             "meaning": "Cutoff trade-offs on authored labels, not optimal care recommendations."}
 
 
+def evaluate_baselines(model, split="held_out", k=3):
+    report = evaluate(model, split, k)
+    rows = model_catalog(model)
+    strategies = []
+    for strategy in ("resource_id", "topic_metadata"):
+        cases = []
+        for case in report["cases"]:
+            request, gold = case["request"], set(case["relevant"])
+            eligible = [row for row in rows if request["stage"] in row["stages"]]
+            eligible.sort(key=lambda row: (
+                int(row["topic"] != request["topic"]) if strategy == "topic_metadata" else 0,
+                row["id"]))
+            ids = [row["id"] for row in eligible[:k]]
+            hits = [int(identifier in gold) for identifier in ids]
+            dcg = sum(hit / math.log2(i + 2) for i, hit in enumerate(hits))
+            ideal = sum(1 / math.log2(i + 2) for i in range(min(k, len(gold))))
+            cases.append({"request": request, "ranked": ids,
+                          "recall_at_k": sum(hits) / len(gold),
+                          "ndcg_at_k": dcg / ideal,
+                          "precision_at_k": sum(hits) / k})
+        metrics = {key: sum(case[key] for case in cases) / len(cases)
+                   for key in ("recall_at_k", "ndcg_at_k", "precision_at_k")}
+        strategies.append({"strategy": strategy, "metrics": metrics, "cases": cases,
+                           "tfidf_minus_baseline": {key: report[key] - value for key, value in metrics.items()}})
+    return {"notice": BANNER, "synthetic_catalog": True, "split": split, "k": k,
+            "source_report_sha256": report["report_sha256"], "baselines": strategies,
+            "meaning": "ID baseline ignores preferences; topic baseline directly reuses label metadata. Neither is independent clinical evidence."}
+
+
 def read_report(path):
     report = read_json(path)
     if not isinstance(report, dict):

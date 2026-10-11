@@ -265,6 +265,11 @@ authored selection groups, not patient subgroups or a fairness assessment.
 one catalog/benchmark snapshot. It reports all five metrics, mean returned
 count and recall capacity, showing the recall/irrelevant-tail trade-off rather
 than choosing a supposedly medically optimal list length.
+`evaluate-baselines --split held_out --k 3` contrasts TF-IDF recall, nDCG and
+precision with two deterministic baselines: eligible IDs alphabetically, and
+same-topic metadata first then ID. The second deliberately uses the same
+metadata underlying authored labels, making their triviality visible. Neither
+baseline establishes learning, semantic understanding or clinical outcomes.
 Unlike the dashboard's ephemeral state, these explicit files persist until
 you delete them. Never put personal data in them.
 `plan ... --text` and `plan-read ... --text` print a readable numbered

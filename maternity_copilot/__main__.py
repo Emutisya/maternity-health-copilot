@@ -5,7 +5,7 @@ from pathlib import Path
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
-from .audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep
+from .audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep
 
 
 def main():
@@ -40,6 +40,9 @@ def main():
     grouping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     curve = commands.add_parser("evaluate-curve")
     curve.add_argument("--split", choices=["development", "held_out"], default="held_out")
+    baselines = commands.add_parser("evaluate-baselines")
+    baselines.add_argument("--split", choices=["development", "held_out"], default="held_out")
+    baselines.add_argument("--k", type=int, choices=range(1, 7), default=3)
     comparing = commands.add_parser("compare")
     comparing.add_argument("--before", required=True)
     comparing.add_argument("--after", required=True)
@@ -125,6 +128,8 @@ def main():
             print(json.dumps(cutoff_curve(model, args.split), indent=2))
         elif args.command == "related":
             print(json.dumps(related_resources(model, args.stage, args.resource, args.limit), indent=2))
+        elif args.command == "evaluate-baselines":
+            print(json.dumps(evaluate_baselines(model, args.split, args.k), indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":
