@@ -140,6 +140,7 @@ The server binds only to `127.0.0.1`, validates Host and browser Origin, provide
 **Fitting:** lower-case tokenization with `[a-z_]+`, document frequency learned from the 12 catalog documents, smoothed IDF `log((1+N)/(1+df))+1`, sublinear term frequency `1+log(count)`, then L2 normalization. Each document combines its title, description and explicit topic/stage/format/focus metadata. Query vectors use only bounded selections with the learned IDF. Cosine similarity ranks compatible-stage documents; ties use stable catalog IDs. No topic hard-filter disguises the learned ranking.
 
 **Artifacts:** JSON IDF vocabulary and document vectors, version and SHA-256 catalog fingerprint. Catalog changes require retraining. No unsafe pickle loading. Artifacts are excluded from version control.
+Local catalog, benchmark and model JSON reject duplicate keys and nonfinite numbers rather than silently choosing one interpretation.
 
 **Limitations:** lexical matching, English only, extremely small corpus, authored metadata, no semantic understanding or clinical judgment. Preferences influence ranking but do not guarantee every match follows that preference. The numerical score is a retrieval similarity only.
 

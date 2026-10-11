@@ -211,7 +211,7 @@ class ProjectTests(unittest.TestCase):
         if changed == benchmark:
             changed["held_out"].reverse()
         decode = json.loads
-        with patch("maternity_copilot.core.json.loads", side_effect=lambda text: changed if "held_out" in text else decode(text)):
+        with patch("maternity_copilot.core.json.loads", side_effect=lambda text, **kwargs: changed if "held_out" in text else decode(text, **kwargs)):
             self.assertNotEqual(evaluate(self.model)["benchmark_sha256"], report["benchmark_sha256"])
         cases = benchmark["held_out"]
         expected = sum(
@@ -241,7 +241,7 @@ class ProjectTests(unittest.TestCase):
         ):
             benchmark = copy.deepcopy(original)
             mutate(benchmark)
-            with patch("maternity_copilot.core.json.loads", side_effect=lambda text: benchmark if "held_out" in text else decode(text)), self.assertRaises(ValueError):
+            with patch("maternity_copilot.core.json.loads", side_effect=lambda text, **kwargs: benchmark if "held_out" in text else decode(text, **kwargs)), self.assertRaises(ValueError):
                 evaluate(self.model)
 
     def test_evaluation_cases_reconcile_with_aggregate_metrics(self):

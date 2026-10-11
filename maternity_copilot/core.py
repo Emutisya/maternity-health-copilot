@@ -25,8 +25,23 @@ class ModelError(ValueError):
     pass
 
 
+def decode_json(text):
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate fields in local JSON. Restore the authored file.")
+            result[key] = value
+        return result
+
+    def invalid_constant(value):
+        raise ValueError("Nonfinite numbers in local JSON are not accepted.")
+
+    return json.loads(text, object_pairs_hook=unique, parse_constant=invalid_constant)
+
+
 def catalog():
-    rows = json.loads((DATA / "catalog.json").read_text(encoding="utf-8"))
+    rows = decode_json((DATA / "catalog.json").read_text(encoding="utf-8"))
     if not isinstance(rows, list) or not rows:
         raise ValueError("Educational catalog must contain at least one resource.")
     ids = set()
@@ -107,7 +122,10 @@ def train(destination):
 
 
 def load_model(path):
-    model = json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        model = decode_json(Path(path).read_text(encoding="utf-8"))
+    except (ValueError, RecursionError) as error:
+        raise ValueError("Model JSON is invalid. Run train again.") from error
     if (not isinstance(model, dict) or type(model.get("version")) is not int
             or not isinstance(model.get("idf"), dict)
             or any(type(value) not in (int, float) for value in model["idf"].values())
@@ -159,7 +177,7 @@ def retrieve(model, request):
 def evaluate(model, split="held_out", k=3):
     if split not in ("development", "held_out") or type(k) is not int or not 1 <= k <= 6:
         raise ValueError("Use development or held_out, and k from 1 to 6.")
-    benchmark = json.loads((DATA / "benchmark.json").read_text(encoding="utf-8"))
+    benchmark = decode_json((DATA / "benchmark.json").read_text(encoding="utf-8"))
     if not isinstance(benchmark, dict) or set(benchmark) != {"development", "held_out"}:
         raise ValueError("Benchmark must contain development and held_out splits.")
     seen = set()
