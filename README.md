@@ -246,6 +246,12 @@ Metric reconciliation allows at most `1e-12` absolute arithmetic difference
 for cross-platform logarithm roundoff; report integrity hashes remain exact,
 and ranking still uses full precision. Overflowing JSON exponents such as
 `1e999` are rejected as nonfinite, not silently accepted as infinity.
+Comparisons include per-case metric deltas and entered/left IDs. For scripted
+retrieval checks, add `--fail-on-regression recall_at_k ndcg_at_k` and optional
+`--tolerance 0.01` (absolute metric units). It prints the comparison/gate and
+exits 1 on aggregate degradation beyond tolerance plus `1e-12` arithmetic
+allowance, 0 on pass, or 2 on invalid input. This is **not a clinical safety or
+deployment gate**; aggregate passes can conceal individual case regressions.
 
 `coverage` needs no model: it audits the 48 possible bounded selections against
 the 18 authored benchmark cases, lists unrepresented combinations, counts

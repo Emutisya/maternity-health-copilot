@@ -5,7 +5,7 @@ from pathlib import Path
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
-from .audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep, vocabulary_audit
+from .audit import METRICS, browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
 
 
 def main():
@@ -49,6 +49,8 @@ def main():
     comparing = commands.add_parser("compare")
     comparing.add_argument("--before", required=True)
     comparing.add_argument("--after", required=True)
+    comparing.add_argument("--fail-on-regression", choices=METRICS, nargs="+")
+    comparing.add_argument("--tolerance", type=float, default=0)
     browsing = commands.add_parser("browse")
     for key, values in OPTIONS.items():
         browsing.add_argument("--" + key, choices=values)
@@ -103,7 +105,14 @@ def main():
             print(json.dumps(coverage(), indent=2))
             return
         if args.command == "compare":
-            print(json.dumps(compare_reports(args.before, args.after), indent=2))
+            comparison = compare_reports(args.before, args.after)
+            if args.fail_on_regression:
+                comparison["regression_gate"] = regression_gate(comparison, args.fail_on_regression, args.tolerance)
+            elif args.tolerance != 0:
+                raise ValueError("--tolerance requires --fail-on-regression.")
+            print(json.dumps(comparison, indent=2))
+            if args.fail_on_regression and not comparison["regression_gate"]["passed"]:
+                parser.exit(1)
             return
         if args.command == "inspect":
             print(json.dumps(inspect_model(args.model), indent=2))

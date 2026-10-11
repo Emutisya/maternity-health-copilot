@@ -378,7 +378,25 @@ def compare_reports(before_path, after_path):
             "before_report_sha256": before["report_sha256"],
             "after_report_sha256": after["report_sha256"],
             "metric_deltas": {key: after[key] - before[key] for key in METRICS},
-            "changed_cases": [{"request": old["request"], "before": old["ranked"], "after": new["ranked"]}
+            "changed_cases": [{"request": old["request"], "before": old["ranked"], "after": new["ranked"],
+                              "entered": sorted(set(new["ranked"]) - set(old["ranked"])),
+                              "left": sorted(set(old["ranked"]) - set(new["ranked"])),
+                              "metric_deltas": {
+                                  key: new[{"mrr_at_k": "reciprocal_rank_at_k", "map_at_k": "average_precision_at_k"}.get(key, key)] -
+                                       old[{"mrr_at_k": "reciprocal_rank_at_k", "map_at_k": "average_precision_at_k"}.get(key, key)]
+                                  for key in METRICS}}
                               for old, new in zip(before["cases"], after["cases"])
                               if old["ranked"] != new["ranked"]],
             "meaning": "Authored relevance comparison only; no statistical or clinical significance."}
+
+
+def regression_gate(comparison, metrics, tolerance=0):
+    if (not isinstance(metrics, list) or not metrics or any(metric not in METRICS for metric in metrics)
+            or len(set(metrics)) != len(metrics) or type(tolerance) not in (int, float)
+            or not math.isfinite(tolerance) or not 0 <= tolerance <= 1):
+        raise ValueError("Use unique documented metrics and finite absolute tolerance 0–1.")
+    failures = [metric for metric in metrics
+                if comparison["metric_deltas"][metric] < -tolerance - 1e-12]
+    return {"passed": not failures, "failed_metrics": failures,
+            "absolute_tolerance": tolerance, "arithmetic_allowance": 1e-12,
+            "scope": "Synthetic aggregate retrieval regression only, not a deployment or clinical safety gate."}

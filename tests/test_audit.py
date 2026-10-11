@@ -12,11 +12,54 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, DATA, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep, vocabulary_audit
+from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_compare_cli_detects_valid_ranking_regression_with_exit_one(self):
+        directory = Path("models") / ("gate-" + uuid.uuid4().hex)
+        before_path, after_path = directory / "before.json", directory / "after.json"
+        try:
+            before = evaluate(fitted_model(catalog()))
+            after = copy.deepcopy(before)
+            case = after["cases"][0]
+            case["ranked"].reverse()
+            case["irrelevant_returned"] = [identifier for identifier in case["ranked"]
+                                          if identifier not in case["relevant"]]
+            case["ndcg_at_k"] = .5
+            case["reciprocal_rank_at_k"] = 1 / 3
+            case["average_precision_at_k"] = 1 / 3
+            for key, field in (("ndcg_at_k", "ndcg_at_k"), ("mrr_at_k", "reciprocal_rank_at_k"),
+                               ("map_at_k", "average_precision_at_k")):
+                after[key] = sum(item[field] for item in after["cases"]) / after["queries"]
+            after["model_sha256"] = "0" * 64
+            after["report_sha256"] = fingerprint({key: value for key, value in after.items()
+                                                 if key != "report_sha256"})
+            write_json(before_path, before)
+            write_json(after_path, after)
+            result = subprocess.run([sys.executable, "-m", "maternity_copilot", "compare",
+                                     "--before", str(before_path), "--after", str(after_path),
+                                     "--fail-on-regression", "ndcg_at_k"],
+                                    text=True, capture_output=True, timeout=10)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            comparison = json.loads(result.stdout)
+            self.assertEqual(len(comparison["changed_cases"]), 1)
+            self.assertEqual(comparison["regression_gate"]["failed_metrics"], ["ndcg_at_k"])
+        finally:
+            shutil.rmtree(directory)
+
+    def test_synthetic_regression_gate_uses_explicit_metrics_and_absolute_tolerance(self):
+        comparison = {"metric_deltas": {"recall_at_k": -.1, "ndcg_at_k": .2}}
+        self.assertFalse(regression_gate(comparison, ["recall_at_k"])["passed"])
+        self.assertTrue(regression_gate(comparison, ["ndcg_at_k"])["passed"])
+        self.assertTrue(regression_gate(comparison, ["recall_at_k"], .1)["passed"])
+        for tolerance in (-1, float("nan"), True):
+            with self.assertRaises(ValueError):
+                regression_gate(comparison, ["recall_at_k"], tolerance)
+        with self.assertRaises(ValueError):
+            regression_gate(comparison, ["clinical_safety"])
+
     def test_development_benchmark_includes_unavailable_format_and_conflicting_focus(self):
         report = evaluate(fitted_model(catalog()), split="development")
         unavailable = next(case for case in report["cases"]
