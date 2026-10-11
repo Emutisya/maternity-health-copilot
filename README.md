@@ -230,6 +230,12 @@ nonfunctional interactive panels and offers bounded browsing/matching/planning
 CLI examples while preserving the educational/human-review notices. Browser
 scenario `no-script` disables script execution in real Chromium and checks
 that no inference request occurs and the fallback fits a narrow viewport. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
+Selector exports bind stage to the validated retrieval response, not a mutable
+DOM control. Page hiding always clears planner/provenance/review state before
+browser caching; the paging-only preservation option is never supplied by a
+page lifecycle event. Browser `export` tests unsupported DOM-stage injection,
+and `lifecycle` verifies real navigation/back and a persisted pagehide event
+dispatched in Chromium, regardless of the browser's cache policy. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
 
 The server binds only to `127.0.0.1`, validates Host and browser Origin, provides no cross-origin access, disables caching and request logs, and never writes requests to disk. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 Duplicate Host, Origin and Content-Type headers are rejected rather than

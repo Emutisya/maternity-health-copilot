@@ -209,6 +209,7 @@ const allowedSelections = {
 const selected = new Set();
 const questionSources = new Map();
 let matchedCatalog = null;
+let matchedStage = null;
 let browsePage = null;
 let retryAction = {mode: "match", offset: 0};
 const traceControllers = new Set();
@@ -388,6 +389,7 @@ function invalidate(preservePlan = false) {
     selected.clear();
     questionSources.clear();
     matchedCatalog = null;
+    matchedStage = null;
   }
   browsePage = null;
   document.getElementById("catalog-pages").hidden = true;
@@ -495,6 +497,7 @@ async function searchResources(mode = "match", offset = 0, preservePlan = false)
       updateQuestions();
     }
     matchedCatalog = data.catalog_sha256;
+    matchedStage = payload.stage;
     cards.replaceChildren();
     data.resources.forEach(resource => {
       const card = element("article", undefined, "card");
@@ -578,7 +581,7 @@ document.getElementById("export-plan").addEventListener("click", async () => {
   }
   const capsule = {version: 1, notice: document.querySelector(".banner").textContent,
     synthetic_catalog: true, human_review_required: true, catalog_sha256: matchedCatalog,
-    stage: document.getElementById("stage").value, selections};
+    stage: matchedStage, selections};
   try {
     const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalJSON(capsule)));
     if (revision !== planRevision || !document.getElementById("review").checked) return;
@@ -615,7 +618,7 @@ document.getElementById("clear").addEventListener("click", () => {
   document.getElementById("preset").value = "custom";
   invalidate();
 });
-window.addEventListener("pagehide", invalidate);
+window.addEventListener("pagehide", () => invalidate());
 </script>
 </body>
 </html>

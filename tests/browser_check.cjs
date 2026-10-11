@@ -48,6 +48,7 @@ async function main() {
   };
   try {
     await call("Network.enable");
+    await call("Runtime.enable");
     await call("Emulation.setScriptExecutionDisabled", {value: scenario === "no-script"});
     const pageUrl = base + "/?browserCheck=" + Date.now();
     await call("Page.navigate", {url: pageUrl});
@@ -248,13 +249,17 @@ async function main() {
         await call("Browser.setDownloadBehavior", {behavior: "allow", downloadPath: folder});
         await evaluate("document.getElementById('match').click()");
         await wait("document.querySelectorAll('#cards article').length === 3");
-        await evaluate("document.querySelectorAll('#cards input')[0].click(); document.querySelectorAll('#cards input')[1].click(); document.getElementById('review').click(); document.getElementById('export-plan').click()");
+        await evaluate(`document.querySelectorAll('#cards input')[0].click(); document.querySelectorAll('#cards input')[1].click();
+          document.getElementById('review').click();
+          const stage = document.getElementById('stage'); stage.add(new Option('not bounded', 'PERSONAL_VALUE')); stage.value = 'PERSONAL_VALUE';
+          document.getElementById('export-plan').click()`);
         const file = path.join(folder, "synthetic-question-selectors.json");
         for (let attempt = 0; attempt < 100 && !fs.existsSync(file); attempt++) await new Promise(resolve => setTimeout(resolve, 50));
         assert.ok(fs.existsSync(file));
         const capsule = JSON.parse(fs.readFileSync(file, "utf8"));
         assert.equal(capsule.selections.length, 2);
         assert.equal(capsule.human_review_required, true);
+        assert.equal(capsule.stage, "pregnancy");
         assert.equal(Object.hasOwn(capsule, "questions"), false);
         const roundTrip = spawnSync("python", ["-m", "maternity_copilot", "plan-read", "--input", file], {encoding: "utf8", timeout: 10000});
         assert.equal(roundTrip.status, 0, roundTrip.stderr);
@@ -279,6 +284,25 @@ async function main() {
       await call("Emulation.setDeviceMetricsOverride", {width: 375, height: 812, deviceScaleFactor: 1, mobile: true});
       assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true);
       await call("Emulation.clearDeviceMetricsOverride");
+    } else if (scenario === "lifecycle") {
+      await evaluate("document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("document.querySelector('#cards input').click(); document.getElementById('review').click()");
+      const history = await call("Page.getNavigationHistory");
+      const entryId = history.entries[history.currentIndex].id;
+      const next = base + "/?lifecycleNext=" + Date.now();
+      await call("Page.navigate", {url: next});
+      await wait(`location.href === ${JSON.stringify(next)} && document.readyState === 'complete'`);
+      await call("Page.navigateToHistoryEntry", {entryId});
+      await wait(`location.href === ${JSON.stringify(pageUrl)} && document.readyState === 'complete' && typeof invalidate === 'function'`);
+      assert.equal(await evaluate("selected.size"), 0);
+      assert.equal(await evaluate("questionSources.size"), 0);
+      await evaluate("document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("document.querySelector('#cards input').click(); document.getElementById('review').click(); window.dispatchEvent(new PageTransitionEvent('pagehide', {persisted: true}))");
+      assert.deepEqual(await evaluate(`({selected: selected.size, sources: questionSources.size, stage: matchedStage,
+        reviewed: document.getElementById('review').checked, exportDisabled: document.getElementById('export-plan').disabled})`),
+        {selected: 0, sources: 0, stage: null, reviewed: false, exportDisabled: true});
     } else {
       throw new Error("Unknown browser scenario");
     }
