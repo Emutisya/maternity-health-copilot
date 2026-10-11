@@ -110,12 +110,15 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
 #planner-provenance { overflow-wrap: anywhere; font-family: Consolas, "Courier New", Courier, monospace; font-size: .8rem; }
 @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } main { padding: 24px 16px; } .banner { position: static; } }
 @media print {
+  body { background: var(--cp-surface); color: var(--cp-text); }
   .banner { position: static; }
   main { padding: 16px; }
   .intro, .eyebrow, .layout > aside, .results-header, #cards, #status, .note, .no-print, footer { display: none; }
   .layout { display: block; margin: 16px 0; }
   .panel { border: none; padding: 0; }
   h1 { font-size: 24px; }
+  #question-list li { break-inside: avoid; page-break-inside: avoid; }
+  h1, h2 { break-after: avoid; }
 }
 </style>
 </head>
@@ -544,7 +547,14 @@ document.getElementById("print").addEventListener("click", () => {
   if (selected.size && document.getElementById("review").checked) window.print();
 });
 window.addEventListener("beforeprint", () => {
+  if (printTheme === null) printTheme = document.documentElement.getAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", "light");
   document.getElementById("print-warning").hidden = selected.size > 0 && document.getElementById("review").checked;
+});
+let printTheme = null;
+window.addEventListener("afterprint", () => {
+  if (printTheme !== null) document.documentElement.setAttribute("data-theme", printTheme);
+  printTheme = null;
 });
 document.getElementById("clear").addEventListener("click", () => {
   document.getElementById("preferences").reset();

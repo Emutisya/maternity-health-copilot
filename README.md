@@ -211,6 +211,12 @@ diagnostics. The page validates catalog identity and the contribution sum,
 labels them nonclinical, and cancels/ignores late traces on invalidation.
 Browse cards deliberately have no ranking trace. Browser scenario `trace`
 checks real diagnostics and a forced late response after selection changes. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
+The browser print lifecycle temporarily uses the light Clawpilot palette on
+white paper, then restores the prior screen theme. Questions and their sources
+stay together across page breaks; notices/provenance remain visible while
+interactive controls and resource cards are omitted. Browser scenario
+`print-layout` verifies dark-theme restoration, print styles and narrow-screen
+overflow. Printing is still controlled by the user's browser/OS. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
 
 The server binds only to `127.0.0.1`, validates Host and browser Origin, provides no cross-origin access, disables caching and request logs, and never writes requests to disk. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 Duplicate Host, Origin and Content-Type headers are rejected rather than

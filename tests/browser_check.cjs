@@ -221,6 +221,23 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 200));
       assert.equal(await evaluate("document.querySelectorAll('#cards article').length"), 0);
       assert.equal(await evaluate("traceControllers.size"), 0);
+    } else if (scenario === "print-layout") {
+      await evaluate("document.documentElement.setAttribute('data-theme', 'dark'); document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("document.querySelector('#cards input').click(); document.getElementById('review').click(); window.dispatchEvent(new Event('beforeprint'))");
+      assert.equal(await evaluate("document.documentElement.getAttribute('data-theme')"), "light");
+      await call("Emulation.setEmulatedMedia", {media: "print"});
+      assert.equal(await evaluate("getComputedStyle(document.body).backgroundColor"), "rgb(255, 255, 255)");
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('#question-list li')).breakInside"), "avoid");
+      assert.notEqual(await evaluate("getComputedStyle(document.querySelector('.banner')).display"), "none");
+      assert.notEqual(await evaluate("getComputedStyle(document.querySelector('.question-source')).display"), "none");
+      assert.equal(await evaluate("getComputedStyle(document.getElementById('cards')).display"), "none");
+      await call("Emulation.setEmulatedMedia", {media: ""});
+      await evaluate("window.dispatchEvent(new Event('afterprint'))");
+      assert.equal(await evaluate("document.documentElement.getAttribute('data-theme')"), "dark");
+      await call("Emulation.setDeviceMetricsOverride", {width: 375, height: 812, deviceScaleFactor: 1, mobile: true});
+      assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true);
+      await call("Emulation.clearDeviceMetricsOverride");
     } else {
       throw new Error("Unknown browser scenario");
     }
