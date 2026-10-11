@@ -229,6 +229,20 @@ class ProjectTests(unittest.TestCase):
             with patch("maternity_copilot.core.json.loads", side_effect=lambda text: benchmark if "held_out" in text else decode(text)), self.assertRaises(ValueError):
                 evaluate(self.model)
 
+    def test_evaluation_cases_reconcile_with_aggregate_metrics(self):
+        report = evaluate(self.model, k=2)
+        cases = report["cases"]
+        self.assertEqual(len(cases), report["queries"])
+        for case in cases:
+            ranked = retrieve(self.model, {**case["request"], "limit": 2})["resources"]
+            self.assertEqual(case["ranked"], [row["id"] for row in ranked])
+            self.assertAlmostEqual(case["recall_at_k"],
+                                   len(set(case["ranked"]) & set(case["relevant"])) / len(case["relevant"]))
+        for aggregate, field in (("recall_at_k", "recall_at_k"),
+                                 ("ndcg_at_k", "ndcg_at_k"), ("mrr_at_k", "reciprocal_rank_at_k")):
+            self.assertAlmostEqual(report[aggregate], sum(case[field] for case in cases) / len(cases))
+        self.assertEqual(evaluate(self.model, split="development")["split"], "development")
+
     def test_http_inference_and_dashboard(self):
         with self.post(json.dumps(REQUEST).encode()) as response:
             result = json.load(response)

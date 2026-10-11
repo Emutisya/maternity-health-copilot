@@ -169,7 +169,7 @@ def evaluate(model, split="held_out", k=3):
                     or any(not isinstance(identifier, str) for identifier in relevant)
                     or len(set(relevant)) != len(relevant) or not set(relevant) <= eligible):
                 raise ValueError("Invalid benchmark relevance labels.")
-    recalls, ndcgs, reciprocal_ranks = [], [], []
+    recalls, ndcgs, reciprocal_ranks, cases = [], [], [], []
     for case in benchmark[split]:
         request = {key: case[key] for key in OPTIONS}
         ids = [row["id"] for row in retrieve(model, {**request, "limit": k})["resources"]]
@@ -180,10 +180,14 @@ def evaluate(model, split="held_out", k=3):
         ideal = sum(1 / math.log2(i + 2) for i in range(min(k, len(gold))))
         ndcgs.append(dcg / ideal)
         reciprocal_ranks.append(next((1 / (i + 1) for i, hit in enumerate(hits) if hit), 0))
+        cases.append({"request": request, "relevant": sorted(gold), "ranked": ids,
+                      "recall_at_k": recalls[-1], "ndcg_at_k": ndcgs[-1],
+                      "reciprocal_rank_at_k": reciprocal_ranks[-1]})
     return {"split": split, "queries": len(recalls), "k": k,
             "catalog_sha256": fingerprint(rows),
             "benchmark_sha256": fingerprint(benchmark),
             "recall_at_k": sum(recalls) / len(recalls),
             "ndcg_at_k": sum(ndcgs) / len(ndcgs),
             "mrr_at_k": sum(reciprocal_ranks) / len(reciprocal_ranks),
+            "cases": cases,
             "limits": "Tiny authored synthetic relevance benchmark; no clinical validation or population evidence."}
