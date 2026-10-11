@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .core import BANNER, OPTIONS, ModelError, model_catalog, retrieve, retrieve_batch
-from .audit import browse_request
+from .audit import browse_request, explain
 
 
 def unique_fields(pairs):
@@ -94,7 +94,7 @@ def make_server(model, port=8765):
         def do_POST(self):
             if not self.allowed():
                 return
-            if self.path not in ("/api/resources", "/api/catalog", "/api/batch"):
+            if self.path not in ("/api/resources", "/api/catalog", "/api/batch", "/api/explain"):
                 self.send(404, {"error": "Not found.", "notice": BANNER})
                 return
             if (len(self.headers.get_all("Content-Type", [])) != 1
@@ -120,6 +120,8 @@ def make_server(model, port=8765):
                     result = browse_request(payload)
                 elif self.path == "/api/batch":
                     result = retrieve_batch(model, payload)
+                elif self.path == "/api/explain":
+                    result = explain(model, payload)
                 else:
                     result = retrieve(model, payload)
             except ModelError as error:

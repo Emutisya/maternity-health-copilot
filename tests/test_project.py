@@ -365,6 +365,20 @@ class ProjectTests(unittest.TestCase):
         self.assertNotIn("results", json.load(error.exception))
         error.exception.close()
 
+    def test_http_lexical_explanation_reconciles_without_accepting_free_text(self):
+        with urlopen(Request(self.base + "/api/explain", data=json.dumps(REQUEST).encode(),
+                             headers={"Content-Type": "application/json"}), timeout=5) as response:
+            report = json.load(response)
+        self.assertEqual(report["notice"], BANNER)
+        for row in report["ranking"]:
+            self.assertAlmostEqual(row["score"], sum(row["term_contributions"].values()))
+        with self.assertRaises(HTTPError) as error:
+            urlopen(Request(self.base + "/api/explain",
+                            data=json.dumps({**REQUEST, "notes": "not accepted"}).encode(),
+                            headers={"Content-Type": "application/json"}), timeout=5)
+        self.assertEqual(error.exception.code, 400)
+        error.exception.close()
+
     def test_stalled_request_returns_timeout_without_breaking_server(self):
         connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=8)
         try:

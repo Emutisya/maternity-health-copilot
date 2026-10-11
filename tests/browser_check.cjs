@@ -205,6 +205,22 @@ async function main() {
       assert.equal(await evaluate("selected.size"), 2);
       assert.equal(await evaluate("document.querySelector('#cards input').checked"), true);
       assert.equal(await evaluate("document.querySelector('#question-list .question-source').textContent.split('question 1').length"), 2);
+    } else if (scenario === "trace") {
+      await evaluate("document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("document.querySelector('#cards summary').click()");
+      await wait("document.querySelector('#cards details table')");
+      assert.match(await evaluate("document.querySelector('#cards details').textContent"), /not risk, confidence/);
+      assert.ok(await evaluate("document.querySelectorAll('#cards details td').length >= 2"));
+      await evaluate(`window.__realFetch = window.fetch;
+        window.fetch = (...args) => new Promise(resolve => {
+          window.__releaseTrace = async () => resolve(await window.__realFetch(args[0], {...args[1], signal: undefined})); });
+        document.querySelectorAll('#cards summary')[1].click()`);
+      await wait("typeof window.__releaseTrace === 'function'");
+      await evaluate("document.getElementById('stage').value = 'postpartum'; document.getElementById('stage').dispatchEvent(new Event('change')); window.__releaseTrace()");
+      await new Promise(resolve => setTimeout(resolve, 200));
+      assert.equal(await evaluate("document.querySelectorAll('#cards article').length"), 0);
+      assert.equal(await evaluate("traceControllers.size"), 0);
     } else {
       throw new Error("Unknown browser scenario");
     }

@@ -194,6 +194,7 @@ const questionSources = new Map();
 let matchedCatalog = null;
 let browsePage = null;
 let retryAction = {mode: "match", offset: 0};
+const traceControllers = new Set();
 const status = document.getElementById("status");
 const cards = document.getElementById("cards");
 const presets = {
@@ -236,6 +237,63 @@ function validResourceResponse(data, request, mode) {
     ids.add(resource.id);
     return true;
   });
+}
+function traceDetails(resource, request, version) {
+  const details = element("details");
+  details.append(element("summary", "Why this lexical match? (not medical relevance)"));
+  const content = element("div");
+  details.append(content);
+  let loaded = false, busy = false;
+  details.addEventListener("toggle", async () => {
+    if (!details.open || loaded || busy) return;
+    busy = true;
+    content.setAttribute("aria-busy", "true");
+    content.textContent = "Loading bounded lexical diagnostics…";
+    const controller = new AbortController();
+    traceControllers.add(controller);
+    try {
+      const response = await fetch("/api/explain", {method: "POST",
+        headers: {"Content-Type": "application/json"}, body: JSON.stringify(request),
+        cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)])});
+      if (!response.ok) throw new Error("Lexical diagnostics unavailable. Check the catalog, train and restart the Python server.");
+      const data = await response.json();
+      if (version !== generation) return;
+      const row = data.ranking?.find(item => item.id === resource.id);
+      const contributions = row?.term_contributions;
+      if (data.catalog_sha256 !== matchedCatalog || data.synthetic_catalog !== true ||
+          data.notice !== document.querySelector(".banner").textContent || !row ||
+          typeof row.score !== "number" || !Number.isFinite(row.score) || row.score < 0 || row.score > 1 + 1e-12 ||
+          Math.abs(row.score - resource.retrieval_score) > 1e-6 ||
+          !contributions || typeof contributions !== "object" || Array.isArray(contributions) ||
+          !Object.entries(contributions).every(([term, value]) =>
+            fields.some(key => request[key] === term) && typeof value === "number" && Number.isFinite(value) && value >= 0) ||
+          Math.abs(Object.values(contributions).reduce((sum, value) => sum + value, 0) - row.score) > 1e-12) {
+        throw new Error("Unexpected lexical diagnostics. No clinical conclusions can be drawn.");
+      }
+      const table = element("table");
+      table.append(element("caption", "Cosine token contributions: text matching only"));
+      const header = element("tr");
+      header.append(element("th", "Selection token"), element("th", "Contribution"));
+      table.append(header);
+      Object.entries(contributions).sort(([a], [b]) => a.localeCompare(b)).forEach(([term, value]) => {
+        const line = element("tr");
+        line.append(element("td", term), element("td", value.toPrecision(8)));
+        table.append(line);
+      });
+      content.replaceChildren(element("p", `Full-precision lexical score: ${row.score}. Contributions sum to this score.`),
+        table, element("p", "These text contributions are not risk, confidence, medical relevance or probability."));
+      loaded = true;
+    } catch (error) {
+      if (version === generation) content.textContent = error.name === "TimeoutError" ?
+        "Lexical diagnostics timed out. Check the local Python server." :
+        error.message || "Lexical diagnostics unavailable. No clinical conclusions can be drawn.";
+    } finally {
+      traceControllers.delete(controller);
+      busy = false;
+      if (version === generation) content.setAttribute("aria-busy", "false");
+    }
+  });
+  return details;
 }
 function syncChecks() {
   cards.querySelectorAll("input[data-question]").forEach(input => { input.checked = selected.has(input.dataset.question); });
@@ -301,6 +359,8 @@ document.getElementById("clear-questions").addEventListener("click", () => {
 });
 function invalidate(preservePlan = false) {
   generation++;
+  traceControllers.forEach(controller => controller.abort());
+  traceControllers.clear();
   if (pending) pending.abort();
   pending = null;
   cards.setAttribute("aria-busy", "false");
@@ -421,6 +481,7 @@ async function searchResources(mode = "match", offset = 0, preservePlan = false)
       card.append(element("div", mode === "browse" ? `SYNTHETIC · ${resource.format} / Catalog order, no score` :
         `SYNTHETIC · ${resource.format} / Similarity ${resource.retrieval_score.toFixed(3)}`, "meta"),
         element("h3", resource.title), element("p", resource.summary));
+      if (mode === "match") card.append(traceDetails(resource, request, version));
       resource.questions.forEach((question, index) => {
         if (!questionSources.has(question)) questionSources.set(question, []);
         if (!questionSources.get(question).some(source => source.id === resource.id && source.number === index + 1)) {
