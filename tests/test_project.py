@@ -146,7 +146,8 @@ class ProjectTests(unittest.TestCase):
         rows[0]["id"], rows[1]["id"] = "a", "z"
         for row in rows:
             row["stages"] = ["pregnancy"]
-        model = {"idf": {"planning": 1}, "vectors": {"a": {"planning": .5000001}, "z": {"planning": .5000002}}}
+        model = {"catalog_sha256": fingerprint(rows), "idf": {"planning": 1},
+                 "vectors": {"a": {"planning": .5000001}, "z": {"planning": .5000002}}}
         with patch("maternity_copilot.core.catalog", return_value=rows), patch("maternity_copilot.core.vector", return_value={"planning": 1}):
             ranked = retrieve(model, REQUEST)["resources"]
         self.assertEqual([row["id"] for row in ranked], ["z", "a"])
@@ -157,6 +158,20 @@ class ProjectTests(unittest.TestCase):
         checklist = {**guide, "format": "checklist", "focus": "planning"}
         self.assertEqual(retrieve(self.model, guide)["resources"][0]["id"], "support-guide")
         self.assertEqual(retrieve(self.model, checklist)["resources"][0]["id"], "support-checklist")
+
+    def test_catalog_drift_is_a_recoverable_service_error_not_a_request_error(self):
+        changed = copy.deepcopy(catalog())
+        changed[0]["summary"] += " New authored content."
+        for failure in ({"return_value": changed}, {"side_effect": FileNotFoundError("isolated catalog")}):
+            with patch("maternity_copilot.core.catalog", **failure):
+                with self.assertRaisesRegex(ValueError, "train.*restart"):
+                    retrieve(self.model, REQUEST)
+                with self.assertRaises(HTTPError) as caught:
+                    self.post(json.dumps(REQUEST).encode())
+                self.assertEqual(caught.exception.code, 503)
+                self.assertEqual(json.load(caught.exception)["notice"], BANNER)
+                caught.exception.close()
+        self.assertEqual(retrieve(self.model, REQUEST)["resources"][0]["id"], "appointments-guide")
 
     def test_invalid_and_symptom_inputs_rejected(self):
         bad = [None, [], "symptoms", {}, {**REQUEST, "symptoms": "pain"},

@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .core import BANNER, OPTIONS, retrieve
+from .core import BANNER, OPTIONS, ModelError, retrieve
 
 
 def unique_fields(pairs):
@@ -93,6 +93,9 @@ def make_server(model, port=8765):
                     raise ValueError("Incomplete request body.")
                 payload = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_fields)
                 result = retrieve(model, payload)
+            except ModelError as error:
+                self.send(503, {"error": str(error), "notice": BANNER})
+                return
             except (ValueError, UnicodeError, RecursionError):
                 self.send(400, {"error": "Invalid input. Only the documented bounded selections are accepted; no symptoms or personal data.", "notice": BANNER})
                 return

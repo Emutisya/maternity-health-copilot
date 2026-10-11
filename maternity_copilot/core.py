@@ -21,6 +21,10 @@ OPTIONS = {
 }
 
 
+class ModelError(ValueError):
+    pass
+
+
 def catalog():
     rows = json.loads((DATA / "catalog.json").read_text(encoding="utf-8"))
     if not isinstance(rows, list) or not rows:
@@ -129,9 +133,15 @@ def validate(request):
 
 def retrieve(model, request):
     limit = validate(request)
+    try:
+        rows = catalog()
+    except (OSError, ValueError, RecursionError) as error:
+        raise ModelError("The educational catalog is unavailable or invalid. Restore the catalog, train and restart the server.") from error
+    if not isinstance(model, dict) or model.get("catalog_sha256") != fingerprint(rows):
+        raise ModelError("The educational catalog changed after training. Run train again and restart the server.")
     query = vector(" ".join(request[key] for key in OPTIONS), model["idf"])
     results = []
-    for row in catalog():
+    for row in rows:
         if request["stage"] not in row["stages"]:
             continue
         score = sum(value * model["vectors"][row["id"]].get(term, 0)
