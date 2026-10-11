@@ -7,10 +7,31 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
-from maternity_copilot.audit import browse, explain, inspect_model
+from maternity_copilot.audit import browse, compare_reports, explain, inspect_model, read_report
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_saved_report_comparison_rejects_forged_metrics_and_mismatched_k(self):
+        directory = Path("models") / ("compare-" + uuid.uuid4().hex)
+        path, other = directory / "before.json", directory / "after.json"
+        try:
+            report = evaluate(fitted_model(catalog()))
+            write_json(path, report)
+            write_json(other, report)
+            self.assertEqual(compare_reports(path, other)["changed_cases"], [])
+            forged = copy.deepcopy(report)
+            forged["recall_at_k"] = 0
+            forged["report_sha256"] = fingerprint({key: value for key, value in forged.items()
+                                                  if key != "report_sha256"})
+            write_json(other, forged)
+            with self.assertRaisesRegex(ValueError, "aggregate"):
+                read_report(other)
+            write_json(other, evaluate(fitted_model(catalog()), k=1))
+            with self.assertRaisesRegex(ValueError, "same split, k"):
+                compare_reports(path, other)
+        finally:
+            shutil.rmtree(directory)
+
     def test_report_publication_preserves_prior_file_on_failure(self):
         directory = Path("models") / ("report-" + uuid.uuid4().hex)
         path = directory / "report.json"
