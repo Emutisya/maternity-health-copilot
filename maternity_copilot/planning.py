@@ -139,3 +139,28 @@ def compare_plans(before, after):
             "retained_order_changed": [item for item in old if item in shared] !=
                                       [item for item in new if item in shared],
             "meaning": "Fixed selector changes only, not a change in care needs or a clinical record."}
+
+
+def edit_plan(plan, remove=None, order=None):
+    plan = checked_plan(plan)
+    if not remove and order is None:
+        raise ValueError("Choose fixed picks to remove or provide a complete retained-pick order.")
+    current = [origin for question in plan["questions"] for origin in question["sources"]]
+    def signature(pick):
+        return pick["resource_id"], pick["question_number"]
+    existing = {signature(pick) for pick in current}
+    removals = set()
+    if remove:
+        select_questions(plan["stage"], remove)
+        removals = {signature(pick) for pick in remove}
+        if not removals <= existing:
+            raise ValueError("Only existing fixed question picks can be removed.")
+    retained = [pick for pick in current if signature(pick) not in removals]
+    if not retained:
+        raise ValueError("Keep at least one question; discard the selection file separately to clear it.")
+    if order is not None:
+        select_questions(plan["stage"], order)
+        if len(order) != len(retained) or {signature(pick) for pick in order} != existing - removals:
+            raise ValueError("Order must include each retained fixed pick exactly once.")
+        retained = order
+    return select_questions(plan["stage"], retained)

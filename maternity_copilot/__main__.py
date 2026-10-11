@@ -4,8 +4,18 @@ from pathlib import Path
 
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, read_json, retrieve, retrieve_batch, train, write_json
 from .server import make_server
-from .planning import compare_plans, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
+from .planning import compare_plans, edit_plan, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 from .audit import METRICS, browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
+
+
+def parse_picks(values):
+    picks = []
+    for value in values or []:
+        identifier, separator, number = value.partition(":")
+        if not separator or not number.isascii() or not number.isdigit():
+            raise ValueError("Use catalog-id:positive-number; no free text.")
+        picks.append({"resource_id": identifier, "question_number": int(number)})
+    return picks
 
 
 def main():
@@ -44,6 +54,12 @@ def main():
     plan_comparison = commands.add_parser("plan-diff")
     plan_comparison.add_argument("--before", required=True)
     plan_comparison.add_argument("--after", required=True)
+    editing = commands.add_parser("plan-edit")
+    editing.add_argument("--input", required=True)
+    editing.add_argument("--remove", action="append")
+    editing.add_argument("--order", action="append")
+    editing.add_argument("--output")
+    editing.add_argument("--text", action="store_true")
     sweeping = commands.add_parser("sweep")
     sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     grouping = commands.add_parser("evaluate-groups")
@@ -83,6 +99,15 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "plan-edit":
+            plan = edit_plan(read_plan(args.input), parse_picks(args.remove),
+                             parse_picks(args.order) if args.order is not None else None)
+            if args.output:
+                if Path(args.output).resolve() == Path(args.model).resolve():
+                    raise ValueError("Selection output must not replace the model.")
+                save_plan(args.output, plan)
+            print(render_plan(plan), end="") if args.text else print(json.dumps(plan, indent=2))
+            return
         if args.command == "plan-diff":
             print(json.dumps(compare_plans(read_plan(args.before), read_plan(args.after)), indent=2))
             return
@@ -108,13 +133,7 @@ def main():
             return
         if args.command == "plan":
             if args.question:
-                picks = []
-                for value in args.question:
-                    identifier, separator, number = value.partition(":")
-                    if not separator or not number.isascii() or not number.isdigit():
-                        raise ValueError("Use --question catalog-id:positive-number; no free text.")
-                    picks.append({"resource_id": identifier, "question_number": int(number)})
-                plan = select_questions(args.stage, picks)
+                plan = select_questions(args.stage, parse_picks(args.question))
             else:
                 plan = make_plan(args.stage, args.resource)
             if args.output:

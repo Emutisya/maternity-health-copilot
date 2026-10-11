@@ -13,10 +13,22 @@ from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, DATA, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, retrieve_batch, train, write_json
 from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
-from maternity_copilot.planning import compare_plans, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
+from maternity_copilot.planning import compare_plans, edit_plan, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_plan_edit_requires_existing_removals_and_complete_retained_order(self):
+        plan = make_plan("pregnancy", ["access-guide", "support-guide"])
+        picks = [origin for question in plan["questions"] for origin in question["sources"]]
+        edited = edit_plan(plan, [picks[0]], list(reversed(picks[1:])))
+        self.assertEqual(edited["questions"][0]["sources"], [picks[-1]])
+        self.assertEqual(len(edited["questions"]), 3)
+        self.assertEqual(len(plan["questions"]), 4)
+        for remove, order in ((picks, None), (None, picks[:1]),
+                              ([{"resource_id": "feeding-guide", "question_number": 1}], None)):
+            with self.assertRaises(ValueError):
+                edit_plan(plan, remove, order)
+
     def test_per_case_gate_catches_regressions_masked_by_equal_aggregate(self):
         request = {"stage": "pregnancy", "topic": "support", "format": "guide", "focus": "support"}
         comparison = {"metric_deltas": {"ndcg_at_k": 0},

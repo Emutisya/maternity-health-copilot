@@ -332,6 +332,11 @@ Merging does not remove the human-review requirement.
 selector files, separating added/removed fixed picks, retained-order changes
 and stage changes. It does not interpret changes as clinical progress, care
 needs or a real appointment history.
+`plan-edit --input models\a.json --remove access-guide:2` removes only existing
+fixed picks. Repeated `--order catalog-id:number` arguments must specify a full
+permutation of the retained picks. At least one pick must remain; no stage or
+free-text editing is offered. Output is read-only unless `--output` explicitly
+saves it, and `--text` renders the same human-review conversation list.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 
