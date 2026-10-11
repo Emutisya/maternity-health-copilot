@@ -90,9 +90,9 @@ def main():
         matching = commands.add_parser(command)
         for key, values in OPTIONS.items():
             matching.add_argument("--" + key, choices=values, required=True)
+        matching.add_argument("--limit", type=int, choices=range(1, 7), default=3)
         if command == "sensitivity":
             matching.add_argument("--field", choices=list(OPTIONS), required=True)
-            matching.add_argument("--limit", type=int, choices=range(1, 7), default=3)
     serving = commands.add_parser("serve")
     serving.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
@@ -192,9 +192,11 @@ def main():
         elif args.command == "batch":
             print(json.dumps(retrieve_batch(model, read_json(args.input, 2048)), indent=2))
         elif args.command == "match":
-            print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
+            request = {key: getattr(args, key) for key in OPTIONS}
+            print(json.dumps(retrieve(model, {**request, "limit": args.limit}), indent=2))
         elif args.command == "explain":
-            print(json.dumps(explain(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
+            request = {key: getattr(args, key) for key in OPTIONS}
+            print(json.dumps(explain(model, {**request, "limit": args.limit}), indent=2))
         elif args.command == "sensitivity":
             request = {key: getattr(args, key) for key in OPTIONS}
             print(json.dumps(sensitivity(model, {**request, "limit": args.limit}, args.field), indent=2))

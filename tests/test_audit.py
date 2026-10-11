@@ -17,6 +17,25 @@ from maternity_copilot.planning import compare_plans, edit_plan, make_plan, merg
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_cli_match_and_explain_share_bounded_result_limit(self):
+        directory = Path("models") / ("limit-" + uuid.uuid4().hex)
+        path = directory / "model.json"
+        try:
+            train(path)
+            selections = ["--stage", "pregnancy", "--topic", "access", "--format", "guide", "--focus", "support", "--limit", "1"]
+            for command in ("match", "explain"):
+                result = subprocess.run([sys.executable, "-m", "maternity_copilot",
+                                         "--model", str(path), command, *selections],
+                                        text=True, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                report = json.loads(result.stdout)
+                if command == "match":
+                    self.assertEqual(len(report["resources"]), 1)
+                else:
+                    self.assertEqual(report["cutoff"]["limit"], 1)
+        finally:
+            shutil.rmtree(directory)
+
     def test_plan_edit_requires_existing_removals_and_complete_retained_order(self):
         plan = make_plan("pregnancy", ["access-guide", "support-guide"])
         picks = [origin for question in plan["questions"] for origin in question["sources"]]

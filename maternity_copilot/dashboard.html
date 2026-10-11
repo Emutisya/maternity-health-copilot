@@ -148,6 +148,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
         <select id="format"><option value="guide">Conversation guide</option><option value="checklist">Question checklist</option></select>
         <label for="focus">Preferred focus</label>
         <select id="focus"><option value="planning">Appointment planning</option><option value="support">Support information</option></select>
+        <label for="limit">Number of educational resources</label>
+        <select id="limit"><option value="1">1 resource</option><option value="2">2 resources</option><option value="3" selected>3 resources</option><option value="4">4 resources</option><option value="5">5 resources</option><option value="6">6 resources</option></select>
         <button class="wide" id="match" type="submit">Find educational resources</button>
         <button class="wide secondary" id="cancel" type="button" hidden>Cancel search (Escape)</button>
       </form>
@@ -181,7 +183,8 @@ const fields = ["stage", "topic", "format", "focus"];
 const allowedSelections = {
   stage: ["pregnancy", "postpartum"],
   topic: ["appointments", "support", "wellbeing", "feeding", "access", "care_team"],
-  format: ["guide", "checklist"], focus: ["planning", "support"]
+  format: ["guide", "checklist"], focus: ["planning", "support"],
+  limit: ["1", "2", "3", "4", "5", "6"]
 };
 const selected = new Set();
 const questionSources = new Map();
@@ -277,7 +280,7 @@ function invalidate() {
   document.getElementById("match").disabled = false;
   document.getElementById("cancel").hidden = true;
   document.getElementById("retry").hidden = true;
-  fields.forEach(key => {
+  [...fields, "limit"].forEach(key => {
     document.getElementById(key).removeAttribute("aria-invalid");
     document.getElementById(key).removeAttribute("aria-describedby");
   });
@@ -300,9 +303,10 @@ document.addEventListener("keydown", event => {
 document.getElementById("preset").addEventListener("change", event => {
   const values = presets[event.target.value];
   if (values) fields.forEach((key, index) => document.getElementById(key).value = values[index]);
+  document.getElementById("limit").value = "3";
   invalidate();
 });
-fields.forEach(key => document.getElementById(key).addEventListener("change", () => {
+[...fields, "limit"].forEach(key => document.getElementById(key).addEventListener("change", () => {
   document.getElementById("preset").value = "custom";
   invalidate();
 }));
@@ -311,7 +315,9 @@ document.getElementById("preferences").addEventListener("submit", async event =>
   invalidate();
   const version = generation;
   const request = Object.fromEntries(fields.map(key => [key, document.getElementById(key).value]));
+  const rawLimit = document.getElementById("limit").value;
   const invalid = fields.filter(key => !allowedSelections[key].includes(request[key]));
+  if (!allowedSelections.limit.includes(rawLimit)) invalid.push("limit");
   if (invalid.length) {
     invalid.forEach(key => {
       document.getElementById(key).setAttribute("aria-invalid", "true");
@@ -321,6 +327,7 @@ document.getElementById("preferences").addEventListener("submit", async event =>
     document.getElementById(invalid[0]).focus();
     return;
   }
+  request.limit = Number(rawLimit);
   const button = document.getElementById("match");
   const focusOnResults = document.activeElement === button;
   button.disabled = true;

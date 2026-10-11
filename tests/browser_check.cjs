@@ -161,6 +161,17 @@ async function main() {
       assert.notEqual(await evaluate("getComputedStyle(document.getElementById('print-warning')).display"), "none");
       assert.equal(await evaluate("getComputedStyle(document.getElementById('review').closest('label')).display"), "none");
       await call("Emulation.setEmulatedMedia", {media: ""});
+    } else if (scenario === "limit") {
+      await evaluate("document.getElementById('limit').value = '6'; document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 6");
+      await evaluate("document.getElementById('limit').value = '1'; document.getElementById('limit').dispatchEvent(new Event('change')); document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 1");
+      await evaluate(`window.__calls = 0; window.__realFetch = window.fetch;
+        window.fetch = (...args) => { window.__calls++; return window.__realFetch(...args); };
+        const limit = document.getElementById('limit'); limit.add(new Option('invalid', '1.5'));
+        limit.value = '1.5'; document.getElementById('match').click()`);
+      assert.equal(await evaluate("window.__calls"), 0);
+      assert.equal(await evaluate("document.activeElement.id"), "limit");
     } else {
       throw new Error("Unknown browser scenario");
     }
