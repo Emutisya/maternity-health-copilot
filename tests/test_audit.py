@@ -11,11 +11,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, read_report, sensitivity, sweep
+from maternity_copilot.audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, read_report, sensitivity, sweep
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_resource_comparison_preserves_chosen_order_and_exact_contrasts(self):
+        ids = ["access-guide", "access-checklist"]
+        result = compare_resources("pregnancy", ids)
+        self.assertEqual([row["id"] for row in result["resources"]], ids)
+        self.assertEqual(result["contrasting_fields"], ["format", "focus"])
+        self.assertEqual(result["shared_questions"], [])
+        for invalid in ([ids[0]], ids * 2, ["access-guide", "appointments-checklist"]):
+            with self.assertRaises(ValueError):
+                compare_resources("pregnancy", invalid)
+
     def test_cutoff_curve_uses_one_snapshot_and_reconciles_every_point(self):
         model = fitted_model(catalog())
         rows = catalog()

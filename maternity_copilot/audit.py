@@ -27,6 +27,27 @@ def browse(filters=None, offset=0, limit=6):
             "ordering": "Resource ID, not medical relevance or ranking."}
 
 
+def compare_resources(stage, identifiers):
+    if (stage not in OPTIONS["stage"] or not isinstance(identifiers, list)
+            or not 2 <= len(identifiers) <= 4
+            or any(not isinstance(identifier, str) for identifier in identifiers)
+            or len(set(identifiers)) != len(identifiers)):
+        raise ValueError("Compare two to four unique catalog IDs for a supported stage.")
+    rows = catalog()
+    source = {row["id"]: row for row in rows}
+    if any(identifier not in source or stage not in source[identifier]["stages"]
+           for identifier in identifiers):
+        raise ValueError("All comparison resources must be compatible with the selected stage.")
+    selected = [source[identifier] for identifier in identifiers]
+    shared = set(selected[0]["questions"]).intersection(*(row["questions"] for row in selected[1:]))
+    return {"notice": BANNER, "synthetic_catalog": True, "human_review_required": True,
+            "catalog_sha256": fingerprint(rows), "stage": stage, "resources": selected,
+            "shared_questions": sorted(shared),
+            "contrasting_fields": [field for field in ("topic", "format", "focus")
+                                   if len({row[field] for row in selected}) > 1],
+            "meaning": "Fixed content comparison in chosen order; no clinical superiority or recommendation."}
+
+
 def inspect_model(path):
     model, artifact_sha256 = load_model_snapshot(path)
     documents = [{"id": identifier, "nonzero_terms": len(weights),

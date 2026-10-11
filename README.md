@@ -150,6 +150,10 @@ lists the fixed catalog in resource-ID order with optional bounded filters.
 Use `--offset` and the returned `next_offset` for pagination. All filters are
 exact, unlike retrieval preferences; an empty intersection is allowed.
 No model is loaded and no similarity or clinical relevance is implied.
+`compare-resources --stage pregnancy --resource access-guide --resource
+access-checklist` presents two to four unique eligible resources in chosen
+order, exact metadata contrasts and shared fixed questions. It needs no model
+and requires human review; it never declares one resource clinically superior.
 
 `python -m maternity_copilot inspect` validates a fitted artifact and reports
 per-document sparsity/norms, a byte-level artifact hash and a canonical
