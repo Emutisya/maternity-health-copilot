@@ -80,6 +80,20 @@ async function main() {
       await wait("document.querySelectorAll('#cards article').length === 3");
       assert.equal(await evaluate("document.getElementById('stage').hasAttribute('aria-invalid')"), false);
       assert.equal(await evaluate("window.__calls"), 1);
+    } else if (scenario === "recovery") {
+      await evaluate(`window.__realFetch = window.fetch; window.__first = true;
+        window.fetch = async (...args) => { const result = await window.__realFetch(...args);
+          if (window.__first) { window.__first = false; return new Response('{}', {status: 503}); }
+          return result;
+        };
+        document.getElementById('match').click()`);
+      await wait("!document.getElementById('retry').hidden");
+      assert.match(await evaluate("document.getElementById('status').textContent"), /train.*restart/);
+      assert.equal(await evaluate("document.querySelectorAll('#cards article').length"), 0);
+      await evaluate("document.getElementById('retry').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      assert.equal(await evaluate("document.getElementById('retry').hidden"), true);
+      assert.equal(await evaluate("document.getElementById('match').disabled"), false);
     } else {
       throw new Error("Unknown browser scenario");
     }

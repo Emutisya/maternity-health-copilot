@@ -94,6 +94,11 @@ marks/focuses invalid controls and links them to a nonreflective recovery
 message. Correcting selections clears the error state. Server validation
 remains authoritative; this is not symptom screening. The optional browser
 scenario `validation` verifies zero requests for an unsupported DOM value.
+The dashboard distinguishes unavailable catalog/model (restore/train/restart),
+invalid selections (reset/reselect) and unreachable backend failures. An
+explicit Retry button repeats only the current bounded synthetic selections;
+it never retries automatically. Browser scenario `recovery` exercises a 503
+then a successful real-backend retry without stale cards.
 
 ### Run alongside the other projects
 

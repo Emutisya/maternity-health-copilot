@@ -145,6 +145,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
     <section aria-label="Educational resources and question planner">
       <div class="results-header"><div><h2>02 / Explore resources</h2><small>Ranked by learned text similarity, not medical relevance.</small></div><span class="pill">12 synthetic resources</span></div>
       <p id="status" role="status" aria-live="polite">Choose a demo and find resources to begin.</p>
+      <button id="retry" class="secondary no-print" type="button" hidden>Retry the same synthetic selections</button>
       <div id="cards" aria-busy="false"><div class="empty">Your educational conversation starters will appear here. No information is sent outside the local Python backend.</div></div>
       <section class="panel" aria-labelledby="planner-title">
         <h2 id="planner-title">03 / Appointment question list</h2>
@@ -199,6 +200,7 @@ function invalidate() {
   status.textContent = "Ready for a new synthetic resource search.";
   document.getElementById("match").disabled = false;
   document.getElementById("cancel").hidden = true;
+  document.getElementById("retry").hidden = true;
   fields.forEach(key => {
     document.getElementById(key).removeAttribute("aria-invalid");
     document.getElementById(key).removeAttribute("aria-describedby");
@@ -212,6 +214,7 @@ function cancelSearch() {
   document.getElementById("match").focus();
 }
 document.getElementById("cancel").addEventListener("click", cancelSearch);
+document.getElementById("retry").addEventListener("click", () => document.getElementById("preferences").requestSubmit());
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && pending) {
     event.preventDefault();
@@ -255,7 +258,11 @@ document.getElementById("preferences").addEventListener("submit", async event =>
       body: JSON.stringify(request), cache: "no-store",
       signal: AbortSignal.any([pending.signal, AbortSignal.timeout(10000)])
     });
-    if (!response.ok) throw new Error("The local backend rejected the request. Check that the model is trained and the demo selections are valid.");
+    if (!response.ok) {
+      if (response.status === 503) throw new Error("The educational model or catalog is unavailable. Restore the catalog, run python -m maternity_copilot train with the same model path, restart the Python server and retry. No clinical conclusions can be drawn.");
+      if (response.status === 400) throw new Error("The local backend rejected these selections. Reset the synthetic demo and choose documented options, then retry. No clinical conclusions can be drawn.");
+      throw new Error(`The local backend is unavailable (HTTP ${response.status}). Check the Python server at its printed loopback URL, then retry. No clinical conclusions can be drawn.`);
+    }
     const data = await response.json();
     if (version !== generation) return;
     cards.replaceChildren();
@@ -282,8 +289,11 @@ document.getElementById("preferences").addEventListener("submit", async event =>
     status.textContent = `${data.resources.length} educational resources matched. Similarity is not risk, confidence or probability.`;
   } catch (error) {
     if (version === generation) {
-      status.textContent = error.name === "TimeoutError" ? "The local request timed out. Check the Python server and try again." : error.message || "Local backend unavailable. Start the Python server and try again.";
+      status.textContent = error.name === "TimeoutError" ? "The local request timed out. Check the Python server and try again." :
+        error.name === "TypeError" ? "Could not reach the local Python server. Start or restart it at its printed loopback URL, then retry. No clinical conclusions can be drawn." :
+        error.message || "Local backend unavailable. Start the Python server and try again.";
       cards.replaceChildren(element("div", "No resources loaded. No clinical conclusions can be drawn.", "empty"));
+      document.getElementById("retry").hidden = false;
     }
   } finally {
     if (version === generation) {
