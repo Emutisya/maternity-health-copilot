@@ -219,6 +219,12 @@ topic/format/focus) and optional `--limit 1..6`. It varies only that enum, repor
 top-list entries/exits and retained rank shifts. It performs no free-text
 perturbation, medical counterfactual or care recommendation.
 
+`plan --stage pregnancy --resource access-guide --resource support-guide`
+needs no model and assembles fixed questions from one to six unique,
+stage-compatible resource IDs. Duplicate question text is merged with all
+source resource/question numbers retained. The JSON marks human review as
+required: this is an educational conversation list, **not a care plan**.
+
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 
 ## From working core to an accessible care-preparation layer

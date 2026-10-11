@@ -8,9 +8,23 @@ from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
 from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sensitivity, sweep
+from maternity_copilot.planning import make_plan
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_question_plan_contains_only_eligible_authored_questions(self):
+        plan = make_plan("pregnancy", ["access-guide", "support-guide"])
+        self.assertTrue(plan["human_review_required"])
+        self.assertEqual(plan["notice"], BANNER)
+        self.assertEqual(len(plan["questions"]), 4)
+        source = {row["id"]: row for row in catalog()}
+        for question in plan["questions"]:
+            for origin in question["sources"]:
+                self.assertEqual(question["text"], source[origin["resource_id"]]["questions"][origin["question_number"] - 1])
+        for ids in ([], ["unknown"], ["access-guide"] * 2, ["appointments-checklist"]):
+            with self.assertRaises(ValueError):
+                make_plan("pregnancy", ids)
+
     def test_sensitivity_changes_only_one_enum_and_exposes_stage_exclusion(self):
         model = fitted_model(catalog())
         request = {"stage": "pregnancy", "topic": "appointments", "format": "guide", "focus": "planning"}

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
+from .planning import make_plan
 from .audit import browse, compare_reports, coverage, explain, inspect_model, sensitivity, sweep
 
 
@@ -14,6 +15,9 @@ def main():
     commands.add_parser("train")
     commands.add_parser("inspect")
     commands.add_parser("coverage")
+    planning = commands.add_parser("plan")
+    planning.add_argument("--stage", choices=OPTIONS["stage"], required=True)
+    planning.add_argument("--resource", action="append", required=True)
     sweeping = commands.add_parser("sweep")
     sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     comparing = commands.add_parser("compare")
@@ -41,6 +45,9 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "plan":
+            print(json.dumps(make_plan(args.stage, args.resource), indent=2))
+            return
         if args.command == "coverage":
             print(json.dumps(coverage(), indent=2))
             return
