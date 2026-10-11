@@ -40,12 +40,16 @@ def decode_json(text):
     return json.loads(text, object_pairs_hook=unique, parse_constant=invalid_constant)
 
 
-def read_json(path, max_bytes=2_000_000):
+def read_bytes(path, max_bytes=2_000_000):
     with Path(path).open("rb") as source:
         raw = source.read(max_bytes + 1)
     if len(raw) > max_bytes:
         raise ValueError(f"Local JSON exceeds the {max_bytes}-byte inspection limit.")
-    return decode_json(raw.decode("utf-8"))
+    return raw
+
+
+def read_json(path, max_bytes=2_000_000):
+    return decode_json(read_bytes(path, max_bytes).decode("utf-8"))
 
 
 def catalog():
@@ -136,8 +140,13 @@ def write_json(destination, payload):
 
 
 def load_model(path):
+    return load_model_snapshot(path)[0]
+
+
+def load_model_snapshot(path):
     try:
-        model = read_json(path)
+        raw = read_bytes(path)
+        model = decode_json(raw.decode("utf-8"))
     except FileNotFoundError as error:
         raise ValueError("Model file is missing. Run train with the same --model path, then retry.") from error
     except (ValueError, RecursionError) as error:
@@ -151,7 +160,7 @@ def load_model(path):
                    for weights in model["vectors"].values())
             or model != fitted_model(catalog())):
         raise ValueError("Model does not match this catalog and implementation. Run train again.")
-    return model
+    return model, hashlib.sha256(raw).hexdigest()
 
 
 def validate(request):

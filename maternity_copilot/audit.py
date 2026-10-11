@@ -1,12 +1,10 @@
 """Deterministic local inspection of authored synthetic educational content."""
 
-import hashlib
 import itertools
 import math
 import re
-from pathlib import Path
 
-from .core import BANNER, OPTIONS, _rank_rows, catalog, evaluate, fingerprint, fitted_model, load_benchmark, load_model, model_catalog, rank_resources, read_json, validate, vector
+from .core import BANNER, OPTIONS, _rank_rows, catalog, evaluate, fingerprint, fitted_model, load_benchmark, load_model_snapshot, model_catalog, rank_resources, read_json, validate, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -30,13 +28,13 @@ def browse(filters=None, offset=0, limit=6):
 
 
 def inspect_model(path):
-    model = load_model(path)
+    model, artifact_sha256 = load_model_snapshot(path)
     documents = [{"id": identifier, "nonzero_terms": len(weights),
                   "l2_norm": math.sqrt(sum(value * value for value in weights.values()))}
                  for identifier, weights in sorted(model["vectors"].items())]
     return {"notice": BANNER, "synthetic_catalog": True,
             "version": model["version"], "catalog_sha256": model["catalog_sha256"],
-            "artifact_sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest(),
+            "artifact_sha256": artifact_sha256,
             "representation_sha256": fingerprint(model),
             "terms": len(model["idf"]), "documents": documents,
             "meaning": "Reproducibility diagnostics, not clinical validation."}

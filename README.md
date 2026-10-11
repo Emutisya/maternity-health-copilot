@@ -148,6 +148,8 @@ No model is loaded and no similarity or clinical relevance is implied.
 per-document sparsity/norms, a byte-level artifact hash and a canonical
 representation hash. Whitespace changes affect the first hash, not the second.
 These diagnostics establish reproducibility only, not clinical fitness.
+Artifact validation and its byte hash use the same bounded read snapshot:
+replacing a file mid-inspection cannot attach a different file's hash.
 Missing model files explain how to retrain with the same global `--model` path.
 CLI file-permission/space failures and deeply nested local JSON exit with code
 2, an actionable recovery message and the educational notice, not a traceback.

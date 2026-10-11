@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import io
 import shutil
@@ -15,6 +16,15 @@ from maternity_copilot.planning import make_plan, read_plan, render_plan, save_p
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_artifact_inspection_hashes_the_same_bytes_it_validates(self):
+        rows = catalog()
+        raw = json.dumps(fitted_model(rows)).encode()
+        with patch("maternity_copilot.core.catalog", return_value=rows):
+            with patch("pathlib.Path.open", return_value=io.BytesIO(raw)) as read:
+                report = inspect_model("unused")
+        self.assertEqual(read.call_count, 1)
+        self.assertEqual(report["artifact_sha256"], hashlib.sha256(raw).hexdigest())
+
     def test_local_reader_caps_bytes_before_decoding(self):
         stream = io.BytesIO(b" " * 20)
         with patch("pathlib.Path.open", return_value=stream):
