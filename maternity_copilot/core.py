@@ -130,6 +130,8 @@ def write_json(destination, payload):
 def load_model(path):
     try:
         model = decode_json(Path(path).read_text(encoding="utf-8"))
+    except FileNotFoundError as error:
+        raise ValueError("Model file is missing. Run train with the same --model path, then retry.") from error
     except (ValueError, RecursionError) as error:
         raise ValueError("Model JSON is invalid. Run train again.") from error
     if (not isinstance(model, dict) or type(model.get("version")) is not int

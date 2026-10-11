@@ -1,6 +1,8 @@
 import copy
 import json
 import shutil
+import subprocess
+import sys
 import unittest
 import uuid
 from pathlib import Path
@@ -12,6 +14,16 @@ from maternity_copilot.planning import make_plan, read_plan, render_plan, save_p
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_cli_missing_model_explains_recovery_without_traceback(self):
+        result = subprocess.run([sys.executable, "-m", "maternity_copilot",
+                                 "--model", "models\\no-such-audit-model.json", "inspect"],
+                                text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("same --model path", result.stderr)
+        self.assertIn(BANNER, result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertEqual(result.stdout, "")
+
     def test_plain_text_plan_retains_notice_review_and_source_provenance(self):
         plan = make_plan("pregnancy", ["access-guide"])
         text = render_plan(plan)

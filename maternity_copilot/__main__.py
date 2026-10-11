@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
+from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
 from .audit import browse, compare_reports, coverage, explain, inspect_model, sensitivity, sweep
@@ -114,15 +114,19 @@ def main():
             try:
                 server = make_server(model, args.port)
             except OSError:
-                parser.exit(2, f"Error: Could not start the educational dashboard on port {args.port}. Choose another --port or use --port 0 for an available port.\n")
+                parser.exit(2, f"Error: Could not start the educational dashboard on port {args.port}. Choose another --port or use --port 0 for an available port.\n{BANNER}\n")
             with server:
                 print(f"Educational prototype: http://127.0.0.1:{server.server_port}", flush=True)
                 try:
                     server.serve_forever()
                 except KeyboardInterrupt:
                     pass
-    except (OSError, ValueError, KeyError) as error:
-        parser.exit(2, f"Error: {error}\n")
+    except OSError:
+        parser.exit(2, f"Error: Cannot read or write the local file. Check the path, permissions and available space, then retry.\n{BANNER}\n")
+    except RecursionError:
+        parser.exit(2, f"Error: Local JSON is too deeply nested. Restore the authored data or regenerate the artifact.\n{BANNER}\n")
+    except (ValueError, KeyError) as error:
+        parser.exit(2, f"Error: {error}\n{BANNER}\n")
 
 
 if __name__ == "__main__":
