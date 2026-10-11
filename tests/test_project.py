@@ -70,6 +70,17 @@ class ProjectTests(unittest.TestCase):
                 self.assertNotIn("Traceback", result.stderr)
                 self.assertEqual(result.stdout, "")
 
+    def test_failed_training_publish_preserves_previous_artifact(self):
+        path = self.workspace / "atomic.json"
+        train(path)
+        original = path.read_bytes()
+        with patch("maternity_copilot.core.os.replace", side_effect=PermissionError("Isolated write failure")):
+            with self.assertRaises(PermissionError):
+                train(path)
+        self.assertEqual(path.read_bytes(), original)
+        self.assertEqual(list(self.workspace.glob(".atomic.json.*.tmp")), [])
+        self.assertEqual(load_model(path), self.model)
+
     def test_cli_occupied_port_has_actionable_recovery(self):
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))

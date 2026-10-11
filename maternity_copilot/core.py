@@ -4,6 +4,8 @@ import hashlib
 import json
 import math
 import re
+import os
+import tempfile
 from collections import Counter
 from pathlib import Path
 
@@ -84,7 +86,16 @@ def train(destination):
     model = fitted_model(catalog())
     path = Path(destination)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(model, indent=2), encoding="utf-8")
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent,
+                                         prefix=f".{path.name}.", suffix=".tmp", delete=False) as output:
+            temporary = Path(output.name)
+            output.write(json.dumps(model, indent=2))
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return model
 
 
