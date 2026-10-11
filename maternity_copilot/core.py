@@ -225,7 +225,8 @@ def evaluate(model, split="held_out", k=3):
     recalls, ndcgs, reciprocal_ranks, precisions, average_precisions, cases = [], [], [], [], [], []
     for case in benchmark[split]:
         request = {key: case[key] for key in OPTIONS}
-        ids = [row["id"] for _, row in _rank_rows(model, request, rows)[:k]]
+        all_ids = [row["id"] for _, row in _rank_rows(model, request, rows)]
+        ids = all_ids[:k]
         gold = set(case["relevant"])
         hits = [int(identifier in gold) for identifier in ids]
         precisions.append(sum(hits) / k)
@@ -238,6 +239,11 @@ def evaluate(model, split="held_out", k=3):
         ndcgs.append(dcg / ideal)
         reciprocal_ranks.append(next((1 / (i + 1) for i, hit in enumerate(hits) if hit), 0))
         cases.append({"request": request, "relevant": sorted(gold), "ranked": ids,
+                      "missing_relevant": [{"id": identifier, "rank": all_ids.index(identifier) + 1}
+                                           for identifier in sorted(gold - set(ids))],
+                      "irrelevant_returned": [identifier for identifier in ids if identifier not in gold],
+                      "recall_ceiling_at_k": min(k, len(gold)) / len(gold),
+                      "eligible_count": len(all_ids),
                       "recall_at_k": recalls[-1], "ndcg_at_k": ndcgs[-1],
                       "precision_at_k": precisions[-1],
                       "average_precision_at_k": average_precisions[-1],

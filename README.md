@@ -182,6 +182,9 @@ Evaluation also reports precision@k (hits divided by requested k, including
 empty slots) and truncated average precision@k (sum of precision at each hit,
 divided by `min(k, relevant_count)`), with macro MAP@k. These expose irrelevant
 tail matches that recall alone can hide.
+Each case identifies missed relevant IDs with their full-list ranks, irrelevant
+returned IDs, eligible candidate count and the maximum recall possible at k.
+This separates cutoff capacity from ranking failures without redefining recall.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 

@@ -11,6 +11,19 @@ from maternity_copilot.audit import browse, explain, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_evaluation_explains_cutoff_losses_without_hiding_ceiling(self):
+        model = fitted_model(catalog())
+        report = evaluate(model, k=1)
+        for case in report["cases"]:
+            full = explain(model, case["request"])["ranking"]
+            ranks = {row["id"]: row["rank"] for row in full}
+            self.assertEqual({row["id"] for row in case["missing_relevant"]},
+                             set(case["relevant"]) - set(case["ranked"]))
+            for row in case["missing_relevant"]:
+                self.assertEqual(row["rank"], ranks[row["id"]])
+                self.assertGreater(row["rank"], 1)
+            self.assertEqual(case["recall_ceiling_at_k"], 1 / len(case["relevant"]))
+
     def test_precision_and_average_precision_penalize_irrelevant_ranks(self):
         model = fitted_model(catalog())
         report = evaluate(model, k=3)
