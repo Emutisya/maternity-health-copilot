@@ -161,6 +161,11 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
 </main>
 <script>
 const fields = ["stage", "topic", "format", "focus"];
+const allowedSelections = {
+  stage: ["pregnancy", "postpartum"],
+  topic: ["appointments", "support", "wellbeing", "feeding", "access", "care_team"],
+  format: ["guide", "checklist"], focus: ["planning", "support"]
+};
 const selected = new Set();
 const status = document.getElementById("status");
 const cards = document.getElementById("cards");
@@ -194,6 +199,10 @@ function invalidate() {
   status.textContent = "Ready for a new synthetic resource search.";
   document.getElementById("match").disabled = false;
   document.getElementById("cancel").hidden = true;
+  fields.forEach(key => {
+    document.getElementById(key).removeAttribute("aria-invalid");
+    document.getElementById(key).removeAttribute("aria-describedby");
+  });
 }
 function cancelSearch() {
   if (!pending) return;
@@ -222,12 +231,22 @@ document.getElementById("preferences").addEventListener("submit", async event =>
   event.preventDefault();
   invalidate();
   const version = generation;
+  const request = Object.fromEntries(fields.map(key => [key, document.getElementById(key).value]));
+  const invalid = fields.filter(key => !allowedSelections[key].includes(request[key]));
+  if (invalid.length) {
+    invalid.forEach(key => {
+      document.getElementById(key).setAttribute("aria-invalid", "true");
+      document.getElementById(key).setAttribute("aria-describedby", "status");
+    });
+    status.textContent = "Choose a documented synthetic option for each highlighted selection. No request was sent; no free text or personal data is accepted.";
+    document.getElementById(invalid[0]).focus();
+    return;
+  }
   const button = document.getElementById("match");
   button.disabled = true;
   document.getElementById("cancel").hidden = false;
   cards.setAttribute("aria-busy", "true");
   status.textContent = "Matching against the local synthetic catalog…";
-  const request = Object.fromEntries(fields.map(key => [key, document.getElementById(key).value]));
   try {
     if (location.protocol === "file:") throw new Error("Open this dashboard through the Python server at http://127.0.0.1:8765, not as a local file.");
     pending = new AbortController();

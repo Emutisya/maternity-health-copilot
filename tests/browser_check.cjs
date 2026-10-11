@@ -63,6 +63,23 @@ async function main() {
       assert.equal(await evaluate("document.querySelectorAll('#cards article').length"), 0);
       assert.equal(await evaluate("document.getElementById('cards').getAttribute('aria-busy')"), "false");
       assert.match(await evaluate("document.getElementById('status').textContent"), /canceled/);
+    } else if (scenario === "validation") {
+      await evaluate(`window.__calls = 0; window.__realFetch = window.fetch;
+        window.fetch = (...args) => { window.__calls++; return window.__realFetch(...args); };
+        const stage = document.getElementById('stage');
+        stage.add(new Option('not bounded', 'PERSONAL_VALUE')); stage.value = 'PERSONAL_VALUE';
+        document.getElementById('match').click()`);
+      assert.equal(await evaluate("window.__calls"), 0);
+      assert.equal(await evaluate("document.activeElement.id"), "stage");
+      assert.equal(await evaluate("document.getElementById('stage').getAttribute('aria-invalid')"), "true");
+      assert.ok(!(await evaluate("document.getElementById('status').textContent")).includes("PERSONAL_VALUE"));
+      assert.equal(await evaluate("document.getElementById('cards').getAttribute('aria-busy')"), "false");
+      await evaluate(`document.getElementById('stage').value = 'pregnancy';
+        document.getElementById('stage').dispatchEvent(new Event('change'));
+        document.getElementById('match').click()`);
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      assert.equal(await evaluate("document.getElementById('stage').hasAttribute('aria-invalid')"), false);
+      assert.equal(await evaluate("window.__calls"), 1);
     } else {
       throw new Error("Unknown browser scenario");
     }

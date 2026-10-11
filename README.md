@@ -89,6 +89,11 @@ The packaged, single-file HTML has all its styles and scripts inline. Opening it
 While searching, the Cancel search button or Escape aborts the request,
 restores focus to Find resources and prevents late responses from repopulating
 the page. Cancellation draws no clinical conclusion.
+Before transport, the dashboard verifies selections against the bounded enums,
+marks/focuses invalid controls and links them to a nonreflective recovery
+message. Correcting selections clears the error state. Server validation
+remains authoritative; this is not symptom screening. The optional browser
+scenario `validation` verifies zero requests for an unsupported DOM value.
 
 ### Run alongside the other projects
 
