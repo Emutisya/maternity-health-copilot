@@ -1,6 +1,10 @@
 """Deterministic local inspection of authored synthetic educational content."""
 
-from .core import BANNER, OPTIONS, catalog, fingerprint
+import hashlib
+import math
+from pathlib import Path
+
+from .core import BANNER, OPTIONS, catalog, fingerprint, load_model
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -21,3 +25,16 @@ def browse(filters=None, offset=0, limit=6):
             "resources": selected[offset:offset + limit],
             "next_offset": offset + limit if offset + limit < len(selected) else None,
             "ordering": "Resource ID, not medical relevance or ranking."}
+
+
+def inspect_model(path):
+    model = load_model(path)
+    documents = [{"id": identifier, "nonzero_terms": len(weights),
+                  "l2_norm": math.sqrt(sum(value * value for value in weights.values()))}
+                 for identifier, weights in sorted(model["vectors"].items())]
+    return {"notice": BANNER, "synthetic_catalog": True,
+            "version": model["version"], "catalog_sha256": model["catalog_sha256"],
+            "artifact_sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest(),
+            "representation_sha256": fingerprint(model),
+            "terms": len(model["idf"]), "documents": documents,
+            "meaning": "Reproducibility diagnostics, not clinical validation."}

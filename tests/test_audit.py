@@ -1,12 +1,30 @@
 import copy
+import json
+import shutil
 import unittest
+import uuid
+from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import catalog, decode_json
-from maternity_copilot.audit import browse
+from maternity_copilot.core import catalog, decode_json, train
+from maternity_copilot.audit import browse, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_inspect_distinguishes_bytes_from_representation(self):
+        directory = Path("models") / ("inspect-" + uuid.uuid4().hex)
+        try:
+            path = directory / "model.json"
+            model = train(path)
+            first = inspect_model(path)
+            path.write_text(json.dumps(model, sort_keys=True), encoding="utf-8")
+            second = inspect_model(path)
+            self.assertNotEqual(first["artifact_sha256"], second["artifact_sha256"])
+            self.assertEqual(first["representation_sha256"], second["representation_sha256"])
+            self.assertTrue(all(abs(row["l2_norm"] - 1) < 1e-12 for row in first["documents"]))
+        finally:
+            shutil.rmtree(directory)
+
     def test_browse_filters_paginate_without_similarity_claims(self):
         page = browse({"stage": "pregnancy", "topic": "appointments"})
         self.assertEqual([row["id"] for row in page["resources"]], ["appointments-guide"])

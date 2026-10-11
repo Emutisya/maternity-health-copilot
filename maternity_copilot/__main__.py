@@ -3,7 +3,7 @@ import json
 
 from .core import OPTIONS, evaluate, load_model, retrieve, train
 from .server import make_server
-from .audit import browse
+from .audit import browse, inspect_model
 
 
 def main():
@@ -11,6 +11,7 @@ def main():
     parser.add_argument("--model", default="models/tfidf.json")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("train")
+    commands.add_parser("inspect")
     browsing = commands.add_parser("browse")
     for key, values in OPTIONS.items():
         browsing.add_argument("--" + key, choices=values)
@@ -28,6 +29,9 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "inspect":
+            print(json.dumps(inspect_model(args.model), indent=2))
+            return
         if args.command == "browse":
             filters = {key: getattr(args, key) for key in OPTIONS if getattr(args, key) is not None}
             print(json.dumps(browse(filters, args.offset, args.limit), indent=2))
