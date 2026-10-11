@@ -11,12 +11,28 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import BANNER, DATA, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
+from maternity_copilot.core import BANNER, DATA, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, retrieve_batch, train, write_json
 from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
 from maternity_copilot.planning import compare_plans, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_batch_validates_every_request_before_loading_one_snapshot(self):
+        request = {"stage": "pregnancy", "topic": "support", "format": "guide", "focus": "support"}
+        model, rows = fitted_model(catalog()), catalog()
+        requests = [request, {**request, "stage": "postpartum", "limit": 1}]
+        with patch("maternity_copilot.core.catalog", return_value=rows) as read:
+            batch = retrieve_batch(model, requests)
+        self.assertEqual(read.call_count, 1)
+        self.assertEqual(batch["results"], [retrieve(model, item) for item in requests])
+        with patch("maternity_copilot.core.catalog") as read:
+            with self.assertRaises(ValueError):
+                retrieve_batch(model, [request, {**request, "name": "not accepted"}])
+            read.assert_not_called()
+        for invalid in ([], requests * 5, {"requests": requests}):
+            with self.assertRaises(ValueError):
+                retrieve_batch(model, invalid)
+
     def test_plan_diff_distinguishes_reordering_from_membership_and_stage_changes(self):
         picks = [{"resource_id": "access-guide", "question_number": 1},
                  {"resource_id": "support-guide", "question_number": 2}]

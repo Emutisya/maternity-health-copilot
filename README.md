@@ -123,6 +123,12 @@ integer) and `limit` (1–12, default 6). It returns ID-ordered fixed content,
 total and next offset, rejecting extra fields/personal data and returning 503
 if the authored catalog cannot be read. It shares inference's loopback,
 media-type, framing, UTF-8, no-store and request-size controls.
+`POST /api/batch` accepts a JSON list of one to eight bounded resource requests
+within the same 2,048-byte envelope. All requests validate before one catalog
+snapshot is read; any invalid item rejects the entire batch, without partial
+results. `batch --input models\synthetic-requests.json` offers the same offline
+behavior and byte bound. These are synthetic scenarios, not patient records,
+cohorts or a bulk clinical interface.
 
 `POST /api/resources` requires `Content-Type: application/json`:
 

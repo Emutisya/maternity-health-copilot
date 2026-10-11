@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
+from .core import BANNER, DATA, OPTIONS, evaluate, load_model, read_json, retrieve, retrieve_batch, train, write_json
 from .server import make_server
 from .planning import compare_plans, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 from .audit import METRICS, browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
@@ -14,6 +14,8 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("train")
     commands.add_parser("inspect")
+    batching = commands.add_parser("batch")
+    batching.add_argument("--input", required=True)
     commands.add_parser("coverage")
     commands.add_parser("catalog-audit")
     vocabulary = commands.add_parser("vocabulary")
@@ -167,6 +169,8 @@ def main():
             print(json.dumps(evaluate_baselines(model, args.split, args.k), indent=2))
         elif args.command == "vocabulary":
             print(json.dumps(vocabulary_audit(model, args.selection_only), indent=2))
+        elif args.command == "batch":
+            print(json.dumps(retrieve_batch(model, read_json(args.input, 2048)), indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":

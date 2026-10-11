@@ -351,6 +351,20 @@ class ProjectTests(unittest.TestCase):
             self.assertEqual(json.load(error.exception)["notice"], BANNER)
             error.exception.close()
 
+    def test_http_batch_rejects_partial_invalid_batches(self):
+        def batch_call(payload):
+            return urlopen(Request(self.base + "/api/batch", data=json.dumps(payload).encode(),
+                                   headers={"Content-Type": "application/json"}), timeout=5)
+        with batch_call([REQUEST, {**REQUEST, "limit": 1}]) as response:
+            result = json.load(response)
+        self.assertEqual(result["count"], 2)
+        self.assertEqual(result["results"][0], retrieve(self.model, REQUEST))
+        with self.assertRaises(HTTPError) as error:
+            batch_call([REQUEST, {**REQUEST, "symptoms": "not accepted"}])
+        self.assertEqual(error.exception.code, 400)
+        self.assertNotIn("results", json.load(error.exception))
+        error.exception.close()
+
     def test_stalled_request_returns_timeout_without_breaking_server(self):
         connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=8)
         try:

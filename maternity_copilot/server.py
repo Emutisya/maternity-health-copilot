@@ -4,7 +4,7 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from .core import BANNER, OPTIONS, ModelError, model_catalog, retrieve
+from .core import BANNER, OPTIONS, ModelError, model_catalog, retrieve, retrieve_batch
 from .audit import browse_request
 
 
@@ -94,7 +94,7 @@ def make_server(model, port=8765):
         def do_POST(self):
             if not self.allowed():
                 return
-            if self.path not in ("/api/resources", "/api/catalog"):
+            if self.path not in ("/api/resources", "/api/catalog", "/api/batch"):
                 self.send(404, {"error": "Not found.", "notice": BANNER})
                 return
             if (len(self.headers.get_all("Content-Type", [])) != 1
@@ -116,7 +116,12 @@ def make_server(model, port=8765):
                 if len(raw) != size:
                     raise ValueError("Incomplete request body.")
                 payload = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_fields)
-                result = browse_request(payload) if self.path == "/api/catalog" else retrieve(model, payload)
+                if self.path == "/api/catalog":
+                    result = browse_request(payload)
+                elif self.path == "/api/batch":
+                    result = retrieve_batch(model, payload)
+                else:
+                    result = retrieve(model, payload)
             except ModelError as error:
                 self.send(503, {"error": str(error), "notice": BANNER})
                 return

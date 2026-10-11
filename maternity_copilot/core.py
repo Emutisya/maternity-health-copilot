@@ -224,6 +224,23 @@ def retrieve(model, request):
                           for score, row in results[:limit]]}
 
 
+def retrieve_batch(model, requests):
+    if not isinstance(requests, list) or not 1 <= len(requests) <= 8:
+        raise ValueError("Use a list of one to eight synthetic bounded selection objects.")
+    limits = [validate(request) for request in requests]
+    rows = model_catalog(model)
+    results = []
+    for request, limit in zip(requests, limits):
+        ranked = _rank_rows(model, request, rows)
+        results.append({"notice": BANNER, "prototype": True, "synthetic_catalog": True,
+                        "score_meaning": "Cosine text similarity, not risk, confidence or probability.",
+                        "resources": [{**row, "retrieval_score": round(score, 6)}
+                                      for score, row in ranked[:limit]]})
+    return {"notice": BANNER, "synthetic_catalog": True, "catalog_sha256": fingerprint(rows),
+            "count": len(results), "results": results,
+            "scope": "Synthetic selection batch; not patient records or cohort evidence."}
+
+
 def load_benchmark(rows=None):
     benchmark = read_json(DATA / "benchmark.json", 65_536)
     if not isinstance(benchmark, dict) or set(benchmark) != {"development", "held_out"}:
