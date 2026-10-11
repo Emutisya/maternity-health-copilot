@@ -162,8 +162,8 @@ def model_catalog(model):
     return rows
 
 
-def retrieve(model, request):
-    limit = validate(request)
+def rank_resources(model, request):
+    validate(request)
     rows = model_catalog(model)
     query = vector(" ".join(request[key] for key in OPTIONS), model["idf"])
     results = []
@@ -172,11 +172,18 @@ def retrieve(model, request):
             continue
         score = sum(value * model["vectors"][row["id"]].get(term, 0)
                     for term, value in query.items())
-        results.append((score, {**row, "retrieval_score": round(score, 6)}))
+        results.append((score, row))
     results.sort(key=lambda item: (-item[0], item[1]["id"]))
+    return results
+
+
+def retrieve(model, request):
+    limit = validate(request)
+    results = rank_resources(model, request)
     return {"notice": BANNER, "prototype": True, "synthetic_catalog": True,
             "score_meaning": "Cosine text similarity, not risk, confidence or probability.",
-            "resources": [row for _, row in results[:limit]]}
+            "resources": [{**row, "retrieval_score": round(score, 6)}
+                          for score, row in results[:limit]]}
 
 
 def evaluate(model, split="held_out", k=3):

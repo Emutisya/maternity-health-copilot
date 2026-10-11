@@ -3,7 +3,7 @@ import json
 
 from .core import OPTIONS, evaluate, load_model, retrieve, train
 from .server import make_server
-from .audit import browse, inspect_model
+from .audit import browse, explain, inspect_model
 
 
 def main():
@@ -20,9 +20,10 @@ def main():
     evaluation = commands.add_parser("evaluate")
     evaluation.add_argument("--split", choices=["development", "held_out"], default="held_out")
     evaluation.add_argument("--k", type=int, choices=range(1, 7), default=3)
-    matching = commands.add_parser("match")
-    for key, values in OPTIONS.items():
-        matching.add_argument("--" + key, choices=values, required=True)
+    for command in ("match", "explain"):
+        matching = commands.add_parser(command)
+        for key, values in OPTIONS.items():
+            matching.add_argument("--" + key, choices=values, required=True)
     serving = commands.add_parser("serve")
     serving.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
@@ -46,6 +47,8 @@ def main():
             print(json.dumps(evaluate(model, args.split, args.k), indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
+        elif args.command == "explain":
+            print(json.dumps(explain(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         else:
             try:
                 server = make_server(model, args.port)

@@ -4,7 +4,7 @@ import hashlib
 import math
 from pathlib import Path
 
-from .core import BANNER, OPTIONS, catalog, fingerprint, load_model
+from .core import BANNER, OPTIONS, catalog, fingerprint, load_model, rank_resources, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -38,3 +38,24 @@ def inspect_model(path):
             "representation_sha256": fingerprint(model),
             "terms": len(model["idf"]), "documents": documents,
             "meaning": "Reproducibility diagnostics, not clinical validation."}
+
+
+def explain(model, request):
+    ranked = rank_resources(model, request)
+    query = vector(" ".join(request[key] for key in OPTIONS), model["idf"])
+    rows = []
+    for position, (score, row) in enumerate(ranked, 1):
+        contributions = {term: value * model["vectors"][row["id"]].get(term, 0)
+                         for term, value in sorted(query.items())
+                         if model["vectors"][row["id"]].get(term, 0)}
+        rows.append({"id": row["id"], "rank": position, "score": score,
+                     "term_contributions": contributions,
+                     "preference_matches": {key: row[key] == request[key]
+                                            for key in ("topic", "format", "focus")}})
+    return {"notice": BANNER, "synthetic_catalog": True,
+            "catalog_sha256": model["catalog_sha256"],
+            "query_terms": dict(sorted(query.items())), "ranking": rows,
+            "excluded_stage_ids": sorted(row["id"] for row in catalog()
+                                         if request["stage"] not in row["stages"]),
+            "ordering": "Full-precision cosine descending, then resource ID ascending.",
+            "meaning": "Lexical contribution diagnostics, not health relevance or confidence."}

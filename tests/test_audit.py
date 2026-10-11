@@ -6,11 +6,22 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import catalog, decode_json, train
-from maternity_copilot.audit import browse, inspect_model
+from maternity_copilot.core import catalog, decode_json, fitted_model, retrieve, train
+from maternity_copilot.audit import browse, explain, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_explanation_reconciles_scores_and_selection_order(self):
+        model = fitted_model(catalog())
+        request = {"stage": "pregnancy", "topic": "support", "format": "guide", "focus": "support"}
+        report = explain(model, request)
+        self.assertEqual([row["id"] for row in report["ranking"][:3]],
+                         [row["id"] for row in retrieve(model, request)["resources"]])
+        for row in report["ranking"]:
+            self.assertAlmostEqual(row["score"], sum(row["term_contributions"].values()))
+        self.assertEqual(report["excluded_stage_ids"], ["appointments-checklist"])
+        self.assertGreater(len(report["ranking"]), 6)
+
     def test_inspect_distinguishes_bytes_from_representation(self):
         directory = Path("models") / ("inspect-" + uuid.uuid4().hex)
         try:

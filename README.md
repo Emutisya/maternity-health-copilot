@@ -149,6 +149,11 @@ per-document sparsity/norms, a byte-level artifact hash and a canonical
 representation hash. Whitespace changes affect the first hash, not the second.
 These diagnostics establish reproducibility only, not clinical fitness.
 
+`explain` accepts the same four required selections as `match` and reports all
+stage-eligible ranks at full precision, per-token cosine contributions, exact
+preference matches and stage-excluded IDs. Contributions sum to the score.
+Metadata matches explain preferences; they do not establish medical relevance.
+
 **Model:** trainable, unsupervised TF-IDF vector-space retrieval baseline implemented in the Python standard library. It is not a generative model or a trained clinical predictor.
 
 **Fitting:** lower-case tokenization with `[a-z_]+`, document frequency learned from the 12 catalog documents, smoothed IDF `log((1+N)/(1+df))+1`, sublinear term frequency `1+log(count)`, then L2 normalization. Each document combines its title, description and explicit topic/stage/format/focus metadata. Query vectors use only bounded selections with the learned IDF. Cosine similarity ranks compatible-stage documents; ties use stable catalog IDs. No topic hard-filter disguises the learned ranking.
