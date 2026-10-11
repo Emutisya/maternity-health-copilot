@@ -163,6 +163,9 @@ Metadata matches explain preferences; they do not establish medical relevance.
 
 **Artifacts:** JSON IDF vocabulary and document vectors, version and SHA-256 catalog fingerprint. Catalog changes require retraining. No unsafe pickle loading. Artifacts are excluded from version control.
 Local catalog, benchmark and model JSON reject duplicate keys and nonfinite numbers rather than silently choosing one interpretation.
+Readers cap bytes before parsing: 64 KiB each for catalog/benchmark, 2 MB for
+models/evaluation reports and 16 KiB for question selectors. UTF-8 is required.
+These are local prototype resource bounds, not protection for public hosting.
 
 **Limitations:** lexical matching, English only, extremely small corpus, authored metadata, no semantic understanding or clinical judgment. Preferences influence ranking but do not guarantee every match follows that preference. The numerical score is a retrieval similarity only.
 

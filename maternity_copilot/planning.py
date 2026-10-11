@@ -1,8 +1,6 @@
 """Fixed catalog questions for human-reviewed educational conversation planning."""
 
-from pathlib import Path
-
-from .core import BANNER, OPTIONS, catalog, decode_json, fingerprint, write_json
+from .core import BANNER, OPTIONS, catalog, fingerprint, read_json, write_json
 
 
 def make_plan(stage, identifiers):
@@ -89,10 +87,7 @@ def save_plan(path, plan):
 
 
 def read_plan(path):
-    raw = Path(path).read_bytes()
-    if len(raw) > 16_384:
-        raise ValueError("Selection files must be at most 16 KB.")
-    capsule = decode_json(raw.decode("utf-8"))
+    capsule = read_json(path, 16_384)
     keys = {"version", "notice", "synthetic_catalog", "human_review_required",
             "catalog_sha256", "stage", "selections", "selection_sha256"}
     if (not isinstance(capsule, dict) or set(capsule) != keys

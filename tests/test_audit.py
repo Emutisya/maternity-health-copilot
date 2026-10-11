@@ -1,5 +1,6 @@
 import copy
 import json
+import io
 import shutil
 import subprocess
 import sys
@@ -8,12 +9,23 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
+from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
 from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sensitivity, sweep
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_local_reader_caps_bytes_before_decoding(self):
+        stream = io.BytesIO(b" " * 20)
+        with patch("pathlib.Path.open", return_value=stream):
+            with self.assertRaisesRegex(ValueError, "10-byte"):
+                read_json("unused", 10)
+        with patch("pathlib.Path.open", return_value=io.BytesIO(b'{"x":1}')):
+            self.assertEqual(read_json("unused", 7), {"x": 1})
+        with patch("pathlib.Path.open", return_value=io.BytesIO('{"x":1}'.encode("utf-16"))):
+            with self.assertRaises(ValueError):
+                read_json("unused")
+
     def test_cli_missing_model_explains_recovery_without_traceback(self):
         result = subprocess.run([sys.executable, "-m", "maternity_copilot",
                                  "--model", "models\\no-such-audit-model.json", "inspect"],

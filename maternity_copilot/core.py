@@ -40,8 +40,16 @@ def decode_json(text):
     return json.loads(text, object_pairs_hook=unique, parse_constant=invalid_constant)
 
 
+def read_json(path, max_bytes=2_000_000):
+    with Path(path).open("rb") as source:
+        raw = source.read(max_bytes + 1)
+    if len(raw) > max_bytes:
+        raise ValueError(f"Local JSON exceeds the {max_bytes}-byte inspection limit.")
+    return decode_json(raw.decode("utf-8"))
+
+
 def catalog():
-    rows = decode_json((DATA / "catalog.json").read_text(encoding="utf-8"))
+    rows = read_json(DATA / "catalog.json", 65_536)
     if not isinstance(rows, list) or not rows:
         raise ValueError("Educational catalog must contain at least one resource.")
     ids = set()
@@ -129,7 +137,7 @@ def write_json(destination, payload):
 
 def load_model(path):
     try:
-        model = decode_json(Path(path).read_text(encoding="utf-8"))
+        model = read_json(path)
     except FileNotFoundError as error:
         raise ValueError("Model file is missing. Run train with the same --model path, then retry.") from error
     except (ValueError, RecursionError) as error:
@@ -199,7 +207,7 @@ def retrieve(model, request):
 
 
 def load_benchmark(rows=None):
-    benchmark = decode_json((DATA / "benchmark.json").read_text(encoding="utf-8"))
+    benchmark = read_json(DATA / "benchmark.json", 65_536)
     if not isinstance(benchmark, dict) or set(benchmark) != {"development", "held_out"}:
         raise ValueError("Benchmark must contain development and held_out splits.")
     seen = set()

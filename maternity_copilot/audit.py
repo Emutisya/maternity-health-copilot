@@ -6,7 +6,7 @@ import math
 import re
 from pathlib import Path
 
-from .core import BANNER, OPTIONS, _rank_rows, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, load_model, model_catalog, rank_resources, validate, vector
+from .core import BANNER, OPTIONS, _rank_rows, catalog, evaluate, fingerprint, fitted_model, load_benchmark, load_model, model_catalog, rank_resources, read_json, validate, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -141,10 +141,7 @@ def sensitivity(model, request, field):
 
 
 def read_report(path):
-    raw = Path(path).read_bytes()
-    if len(raw) > 2_000_000:
-        raise ValueError("Evaluation report exceeds the local 2 MB inspection limit.")
-    report = decode_json(raw.decode("utf-8"))
+    report = read_json(path)
     if not isinstance(report, dict):
         raise ValueError("Expected a versioned synthetic evaluation report.")
     reference = evaluate(fitted_model(catalog()), report.get("split"), report.get("k"))
