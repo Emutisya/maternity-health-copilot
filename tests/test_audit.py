@@ -6,11 +6,21 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import catalog, decode_json, evaluate, fitted_model, load_benchmark, retrieve, train
+from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train
 from maternity_copilot.audit import browse, explain, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_report_manifest_is_reproducible_and_self_identifying(self):
+        model = fitted_model(catalog())
+        report = evaluate(model)
+        self.assertEqual(report, evaluate(model))
+        digest = report.pop("report_sha256")
+        self.assertEqual(digest, fingerprint(report))
+        self.assertEqual(report["model_sha256"], fingerprint(model))
+        self.assertEqual(report["notice"], BANNER)
+        self.assertNotEqual(digest, evaluate(model, k=1)["report_sha256"])
+
     def test_evaluation_explains_cutoff_losses_without_hiding_ceiling(self):
         model = fitted_model(catalog())
         report = evaluate(model, k=1)

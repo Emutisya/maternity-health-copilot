@@ -248,7 +248,9 @@ def evaluate(model, split="held_out", k=3):
                       "precision_at_k": precisions[-1],
                       "average_precision_at_k": average_precisions[-1],
                       "reciprocal_rank_at_k": reciprocal_ranks[-1]})
-    return {"split": split, "queries": len(recalls), "k": k,
+    report = {"report_version": 1, "notice": BANNER, "synthetic_catalog": True,
+            "model_sha256": fingerprint(model),
+            "split": split, "queries": len(recalls), "k": k,
             "catalog_sha256": fingerprint(rows),
             "benchmark_sha256": fingerprint(benchmark),
             "recall_at_k": sum(recalls) / len(recalls),
@@ -258,3 +260,5 @@ def evaluate(model, split="held_out", k=3):
             "map_at_k": sum(average_precisions) / len(average_precisions),
             "cases": cases,
             "limits": "Tiny authored synthetic relevance benchmark; no clinical validation or population evidence."}
+    report["report_sha256"] = fingerprint(report)
+    return report
