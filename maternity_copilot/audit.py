@@ -6,7 +6,7 @@ import math
 import re
 from pathlib import Path
 
-from .core import BANNER, OPTIONS, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, load_model, rank_resources, validate, vector
+from .core import BANNER, OPTIONS, _rank_rows, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, load_model, model_catalog, rank_resources, validate, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -91,6 +91,32 @@ def coverage():
                                           for case in cases)}
                 for stage, topic in itertools.product(OPTIONS["stage"], OPTIONS["topic"])],
             "meaning": "Coverage of authored selections and labels, not real users or clinical coverage."}
+
+
+def sweep(model, k=3):
+    if type(k) is not int or not 1 <= k <= 6:
+        raise ValueError("Sweep k must be an integer from 1 to 6.")
+    rows = model_catalog(model)
+    cases = []
+    for values in itertools.product(*OPTIONS.values()):
+        request = dict(zip(OPTIONS, values))
+        ranked = _rank_rows(model, request, rows)
+        ids = [row["id"] for _, row in ranked[:k]]
+        relevant = {row["id"] for row in rows
+                    if request["stage"] in row["stages"] and row["topic"] == request["topic"]}
+        cases.append({"request": request, "ranked": ids, "relevant": sorted(relevant),
+                      "recall_at_k": len(set(ids) & relevant) / len(relevant) if relevant else None,
+                      "top_preference_matches": {key: ranked[0][1][key] == request[key]
+                                                 for key in ("topic", "format", "focus")} if ranked else {}})
+    labeled = [case for case in cases if case["recall_at_k"] is not None]
+    return {"notice": BANNER, "synthetic_catalog": True, "catalog_sha256": fingerprint(rows),
+            "k": k, "queries": len(cases), "cases": cases,
+            "macro_metadata_recall_at_k": sum(case["recall_at_k"] for case in labeled) / len(labeled) if labeled else None,
+            "unlabeled_queries": len(cases) - len(labeled),
+            "top_preference_match_counts": {
+                key: sum(case["top_preference_matches"].get(key, False) for case in cases)
+                for key in ("topic", "format", "focus")},
+            "meaning": "Exhaustive metadata stress check; labels are derived from this catalog, not independent evaluation."}
 
 
 def read_report(path):

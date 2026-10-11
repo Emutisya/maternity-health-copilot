@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
-from .audit import browse, compare_reports, coverage, explain, inspect_model
+from .audit import browse, compare_reports, coverage, explain, inspect_model, sweep
 
 
 def main():
@@ -14,6 +14,8 @@ def main():
     commands.add_parser("train")
     commands.add_parser("inspect")
     commands.add_parser("coverage")
+    sweeping = commands.add_parser("sweep")
+    sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     comparing = commands.add_parser("compare")
     comparing.add_argument("--before", required=True)
     comparing.add_argument("--after", required=True)
@@ -63,6 +65,8 @@ def main():
                     raise ValueError("Report output must not replace the model or packaged data.")
                 write_json(target, report)
             print(json.dumps(report, indent=2))
+        elif args.command == "sweep":
+            print(json.dumps(sweep(model, args.k), indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":

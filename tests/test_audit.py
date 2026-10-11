@@ -7,10 +7,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report
+from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sweep
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_exhaustive_sweep_reconciles_metadata_labels_and_preference_counts(self):
+        report = sweep(fitted_model(catalog()), k=1)
+        self.assertEqual(report["queries"], 48)
+        self.assertEqual(report["unlabeled_queries"], 0)
+        for case in report["cases"]:
+            self.assertEqual(case["recall_at_k"],
+                             len(set(case["ranked"]) & set(case["relevant"])) / len(case["relevant"]))
+        for key in ("topic", "format", "focus"):
+            self.assertEqual(report["top_preference_match_counts"][key],
+                             sum(case["top_preference_matches"][key] for case in report["cases"]))
+
     def test_coverage_exposes_all_unrepresented_bounded_queries(self):
         report = coverage()
         self.assertEqual(report["possible_queries"], 48)
