@@ -252,6 +252,10 @@ requires a fresh human review and selection; hashes are not signatures.
 case counts for each bounded selection value. Empty groups use null, not zero.
 Weighted group metrics reconcile with the original report. These are tiny
 authored selection groups, not patient subgroups or a fairness assessment.
+`evaluate-curve --split held_out` evaluates every supported cutoff, 1–6, on
+one catalog/benchmark snapshot. It reports all five metrics, mean returned
+count and recall capacity, showing the recall/irrelevant-tail trade-off rather
+than choosing a supposedly medically optimal list length.
 Unlike the dashboard's ephemeral state, these explicit files persist until
 you delete them. Never put personal data in them.
 `plan ... --text` and `plan-read ... --text` print a readable numbered

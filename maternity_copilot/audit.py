@@ -4,7 +4,7 @@ import itertools
 import math
 import re
 
-from .core import BANNER, OPTIONS, _rank_rows, catalog, evaluate, fingerprint, fitted_model, load_benchmark, load_model_snapshot, model_catalog, rank_resources, read_json, validate, vector
+from .core import BANNER, OPTIONS, _evaluate_snapshot, _rank_rows, catalog, evaluate, fingerprint, fitted_model, load_benchmark, load_model_snapshot, model_catalog, rank_resources, read_json, validate, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -153,6 +153,23 @@ def grouped_evaluation(model, split="held_out", k=3, by="topic"):
             "source_report_sha256": report["report_sha256"], "split": split, "k": k,
             "group_by": by, "groups": groups,
             "meaning": "Authored selection groups, not patient subgroups, fairness or population evidence."}
+
+
+def cutoff_curve(model, split="held_out"):
+    if split not in ("development", "held_out"):
+        raise ValueError("Curve split must be development or held_out.")
+    rows = model_catalog(model)
+    benchmark = load_benchmark(rows)
+    points = []
+    for k in range(1, 7):
+        report = _evaluate_snapshot(model, rows, benchmark, split, k)
+        points.append({"k": k, "metrics": {key: report[key] for key in METRICS},
+                       "mean_returned": sum(len(case["ranked"]) for case in report["cases"]) / report["queries"],
+                       "mean_recall_ceiling": sum(case["recall_ceiling_at_k"] for case in report["cases"]) / report["queries"]})
+    return {"notice": BANNER, "synthetic_catalog": True,
+            "catalog_sha256": fingerprint(rows), "benchmark_sha256": fingerprint(benchmark),
+            "split": split, "queries": len(benchmark[split]), "points": points,
+            "meaning": "Cutoff trade-offs on authored labels, not optimal care recommendations."}
 
 
 def read_report(path):

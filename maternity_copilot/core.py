@@ -247,6 +247,10 @@ def evaluate(model, split="held_out", k=3):
         raise ValueError("Use development or held_out, and k from 1 to 6.")
     rows = model_catalog(model)
     benchmark = load_benchmark(rows)
+    return _evaluate_snapshot(model, rows, benchmark, split, k)
+
+
+def _evaluate_snapshot(model, rows, benchmark, split, k):
     recalls, ndcgs, reciprocal_ranks, precisions, average_precisions, cases = [], [], [], [], [], []
     for case in benchmark[split]:
         request = {key: case[key] for key in OPTIONS}

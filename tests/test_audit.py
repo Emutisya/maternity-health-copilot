@@ -11,11 +11,24 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, coverage, explain, grouped_evaluation, inspect_model, read_report, sensitivity, sweep
+from maternity_copilot.audit import browse, compare_reports, coverage, cutoff_curve, explain, grouped_evaluation, inspect_model, read_report, sensitivity, sweep
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_cutoff_curve_uses_one_snapshot_and_reconciles_every_point(self):
+        model = fitted_model(catalog())
+        rows = catalog()
+        with patch("maternity_copilot.core.catalog", return_value=rows) as read:
+            curve = cutoff_curve(model)
+        self.assertEqual(read.call_count, 1)
+        self.assertEqual([point["k"] for point in curve["points"]], list(range(1, 7)))
+        recall = [point["metrics"]["recall_at_k"] for point in curve["points"]]
+        self.assertEqual(recall, sorted(recall))
+        for point in curve["points"]:
+            report = evaluate(model, k=point["k"])
+            self.assertEqual(point["metrics"]["ndcg_at_k"], report["ndcg_at_k"])
+
     def test_grouped_evaluation_weights_reconcile_with_macro_report(self):
         model = fitted_model(catalog())
         report = evaluate(model, k=1)
