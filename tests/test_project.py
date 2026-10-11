@@ -8,6 +8,7 @@ import threading
 import unittest
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -141,6 +142,20 @@ class ProjectTests(unittest.TestCase):
     def post(self, payload, headers=None):
         return urlopen(Request(self.base + "/api/resources", data=payload,
                               headers=headers or {"Content-Type": "application/json"}), timeout=5)
+
+    def test_invalid_benchmark_splits_and_relevance_labels_are_rejected(self):
+        decode = json.loads
+        original = json.loads((DATA / "benchmark.json").read_text(encoding="utf-8"))
+        for mutate in (
+            lambda data: data.update(held_out=[]),
+            lambda data: data["held_out"][0].update(relevant=["unknown"]),
+            lambda data: data["held_out"][0].update(relevant=["appointments-guide"] * 2),
+            lambda data: data["held_out"][0].update(relevant="appointments-guide"),
+        ):
+            benchmark = copy.deepcopy(original)
+            mutate(benchmark)
+            with patch("maternity_copilot.core.json.loads", side_effect=lambda text: benchmark if "held_out" in text else decode(text)), self.assertRaises(ValueError):
+                evaluate(self.model)
 
     def test_http_inference_and_dashboard(self):
         with self.post(json.dumps(REQUEST).encode()) as response:

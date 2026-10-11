@@ -104,10 +104,16 @@ def evaluate(model, split="held_out", k=3):
     if split not in ("development", "held_out") or type(k) is not int or not 1 <= k <= 6:
         raise ValueError("Use development or held_out, and k from 1 to 6.")
     benchmark = json.loads((DATA / "benchmark.json").read_text(encoding="utf-8"))
+    if not isinstance(benchmark, dict) or set(benchmark) != {"development", "held_out"}:
+        raise ValueError("Benchmark must contain development and held_out splits.")
     seen = set()
     rows = catalog()
     for cases in benchmark.values():
+        if not isinstance(cases, list) or not cases:
+            raise ValueError("Each benchmark split must contain at least one query.")
         for case in cases:
+            if not isinstance(case, dict) or not set(OPTIONS) <= set(case):
+                raise ValueError("Benchmark query is missing bounded selections.")
             request = {key: case[key] for key in OPTIONS}
             validate(request)
             signature = tuple(request.values())
@@ -115,7 +121,10 @@ def evaluate(model, split="held_out", k=3):
                 raise ValueError("Duplicate benchmark query across splits.")
             seen.add(signature)
             eligible = {row["id"] for row in rows if case["stage"] in row["stages"]}
-            if not case["relevant"] or not set(case["relevant"]) <= eligible:
+            relevant = case.get("relevant")
+            if (not isinstance(relevant, list) or not relevant
+                    or any(not isinstance(identifier, str) for identifier in relevant)
+                    or len(set(relevant)) != len(relevant) or not set(relevant) <= eligible):
                 raise ValueError("Invalid benchmark relevance labels.")
     recalls, ndcgs, reciprocal_ranks = [], [], []
     for case in benchmark[split]:
