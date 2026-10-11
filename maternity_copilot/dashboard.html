@@ -177,6 +177,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
         <p id="empty-list">No questions selected yet.</p>
         <label class="question no-print"><input id="review" type="checkbox" disabled><span>I have reviewed this synthetic question list and understand it is not a care plan or medical advice.</span></label>
         <button id="print" class="secondary no-print" type="button" disabled>Print question list</button>
+        <button id="export-plan" class="secondary no-print" type="button" disabled>Download synthetic question selectors</button>
+        <p class="no-print">Downloads persist on your device. Only fixed catalog selectors are exported, never personal notes or question text. Use for synthetic demonstrations only.</p>
         <button id="clear-questions" class="secondary no-print" type="button" disabled>Clear question list only</button>
         <button id="clear" class="secondary no-print" type="button">Reset demo</button>
       </section>
@@ -198,6 +200,7 @@ let matchedCatalog = null;
 let browsePage = null;
 let retryAction = {mode: "match", offset: 0};
 const traceControllers = new Set();
+let planRevision = 0;
 const status = document.getElementById("status");
 const cards = document.getElementById("cards");
 const presets = {
@@ -312,6 +315,7 @@ function moveQuestion(question, delta) {
   updateQuestions(index + delta, delta < 0 ? "up" : "down");
 }
 function updateQuestions(focusIndex = null, focusAction = "remove") {
+  planRevision++;
   document.getElementById("review").checked = false;
   document.getElementById("review").disabled = selected.size === 0;
   document.getElementById("print-warning").hidden = false;
@@ -344,6 +348,7 @@ function updateQuestions(focusIndex = null, focusAction = "remove") {
   }));
   document.getElementById("empty-list").hidden = selected.size > 0;
   document.getElementById("print").disabled = true;
+  document.getElementById("export-plan").disabled = true;
   document.getElementById("clear-questions").disabled = selected.size === 0;
   document.getElementById("planner-count").textContent = `${selected.size} fixed question${selected.size === 1 ? "" : "s"} selected.`;
   document.getElementById("planner-provenance").hidden = selected.size === 0;
@@ -541,7 +546,44 @@ async function searchResources(mode = "match", offset = 0, preservePlan = false)
 }
 document.getElementById("review").addEventListener("change", event => {
   document.getElementById("print").disabled = selected.size === 0 || !event.target.checked;
+  document.getElementById("export-plan").disabled = selected.size === 0 || !event.target.checked;
   document.getElementById("print-warning").hidden = event.target.checked && selected.size > 0;
+});
+function canonicalJSON(value) {
+  if (Array.isArray(value)) return "[" + value.map(canonicalJSON).join(", ") + "]";
+  if (value && typeof value === "object") return "{" + Object.keys(value).sort().map(key =>
+    JSON.stringify(key) + ": " + canonicalJSON(value[key])).join(", ") + "}";
+  return JSON.stringify(value);
+}
+document.getElementById("export-plan").addEventListener("click", async () => {
+  if (!selected.size || !document.getElementById("review").checked) return;
+  const revision = planRevision;
+  const selections = Array.from(selected).flatMap(question => (questionSources.get(question) || []).map(source =>
+    ({resource_id: source.id, question_number: source.number})));
+  if (!selections.length || selections.length > 12 || new Set(selections.map(pick => pick.resource_id)).size > 6) {
+    status.textContent = "Portable selectors support at most twelve fixed picks from six resources. Reduce this synthetic list before downloading.";
+    return;
+  }
+  const capsule = {version: 1, notice: document.querySelector(".banner").textContent,
+    synthetic_catalog: true, human_review_required: true, catalog_sha256: matchedCatalog,
+    stage: document.getElementById("stage").value, selections};
+  try {
+    const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalJSON(capsule)));
+    if (revision !== planRevision || !document.getElementById("review").checked) return;
+    capsule.selection_sha256 = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, "0")).join("");
+    const url = URL.createObjectURL(new Blob([JSON.stringify(capsule, null, 2) + "\n"], {type: "application/json"}));
+    const link = element("a");
+    link.href = url;
+    link.download = "synthetic-question-selectors.json";
+    link.hidden = true;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    status.textContent = "Synthetic fixed-question selectors downloaded. The file persists until you delete it; no clinical approval or personal notes are included.";
+  } catch {
+    if (revision === planRevision) status.textContent = "Selector export unavailable. Use the local CLI plan command; no clinical conclusions can be drawn.";
+  }
 });
 document.getElementById("print").addEventListener("click", () => {
   if (selected.size && document.getElementById("review").checked) window.print();

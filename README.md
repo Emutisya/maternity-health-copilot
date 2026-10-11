@@ -217,6 +217,14 @@ stay together across page breaks; notices/provenance remain visible while
 interactive controls and resource cards are omitted. Browser scenario
 `print-layout` verifies dark-theme restoration, print styles and narrow-screen
 overflow. Printing is still controlled by the user's browser/OS. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
+After reader acknowledgment, Download synthetic question selectors exports
+the CLI-compatible versioned selector capsule with SHA-256 integrity and
+catalog identity, not question text or notes. It enforces twelve-pick/
+six-resource bounds and cancels a pending export if the list/review changes.
+The explicit download persists on the device; it is not a clinical record
+or approval. `plan-read --input synthetic-question-selectors.json` restores
+the fixed prompts for human review. Browser scenario `export` performs a real
+download, validates it through Python and tests delayed-export invalidation. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
 
 The server binds only to `127.0.0.1`, validates Host and browser Origin, provides no cross-origin access, disables caching and request logs, and never writes requests to disk. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 Duplicate Host, Origin and Content-Type headers are rejected rather than

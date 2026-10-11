@@ -1,5 +1,8 @@
 // Optional real-browser checks; Node 22+ and an isolated Chromium CDP instance.
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const {spawnSync} = require("node:child_process");
 const [base, port, scenario = "cancel"] = process.argv.slice(2);
 
 async function main() {
@@ -238,10 +241,40 @@ async function main() {
       await call("Emulation.setDeviceMetricsOverride", {width: 375, height: 812, deviceScaleFactor: 1, mobile: true});
       assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true);
       await call("Emulation.clearDeviceMetricsOverride");
+    } else if (scenario === "export") {
+      const folder = path.resolve("models", "browser-export-" + Date.now());
+      fs.mkdirSync(folder, {recursive: true});
+      try {
+        await call("Browser.setDownloadBehavior", {behavior: "allow", downloadPath: folder});
+        await evaluate("document.getElementById('match').click()");
+        await wait("document.querySelectorAll('#cards article').length === 3");
+        await evaluate("document.querySelectorAll('#cards input')[0].click(); document.querySelectorAll('#cards input')[1].click(); document.getElementById('review').click(); document.getElementById('export-plan').click()");
+        const file = path.join(folder, "synthetic-question-selectors.json");
+        for (let attempt = 0; attempt < 100 && !fs.existsSync(file); attempt++) await new Promise(resolve => setTimeout(resolve, 50));
+        assert.ok(fs.existsSync(file));
+        const capsule = JSON.parse(fs.readFileSync(file, "utf8"));
+        assert.equal(capsule.selections.length, 2);
+        assert.equal(capsule.human_review_required, true);
+        assert.equal(Object.hasOwn(capsule, "questions"), false);
+        const roundTrip = spawnSync("python", ["-m", "maternity_copilot", "plan-read", "--input", file], {encoding: "utf8", timeout: 10000});
+        assert.equal(roundTrip.status, 0, roundTrip.stderr);
+        assert.equal(JSON.parse(roundTrip.stdout).questions.length, 2);
+        await evaluate(`window.__realDigest = crypto.subtle.digest.bind(crypto.subtle);
+          crypto.subtle.digest = (...args) => new Promise(resolve => {
+            window.__releaseExport = async () => resolve(await window.__realDigest(...args)); });
+          document.getElementById('export-plan').click()`);
+        await wait("typeof window.__releaseExport === 'function'");
+        await evaluate("document.querySelectorAll('#cards input')[2].click(); window.__releaseExport()");
+        await new Promise(resolve => setTimeout(resolve, 200));
+        assert.equal(fs.readdirSync(folder).length, 1);
+      } finally {
+        await call("Browser.setDownloadBehavior", {behavior: "default"});
+        fs.rmSync(folder, {recursive: true, force: true});
+      }
     } else {
       throw new Error("Unknown browser scenario");
     }
-    assert.ok(urls.every(url => url.startsWith(base + "/")), JSON.stringify(urls));
+    assert.ok(urls.every(url => url.startsWith(base + "/") || (scenario === "export" && url.startsWith("blob:" + base + "/"))), JSON.stringify(urls));
     assert.equal(await evaluate("window.localStorage.length + window.sessionStorage.length"), 0);
     console.log(`PASS real Chromium ${scenario}; ${urls.length} loopback requests; no browser storage`);
   } finally {
