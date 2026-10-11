@@ -138,6 +138,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
         <label for="focus">Preferred focus</label>
         <select id="focus"><option value="planning">Appointment planning</option><option value="support">Support information</option></select>
         <button class="wide" id="match" type="submit">Find educational resources</button>
+        <button class="wide secondary" id="cancel" type="button" hidden>Cancel search (Escape)</button>
       </form>
       <div class="note">This is not symptom screening, diagnosis, triage or treatment. Nothing here assesses whether you are safe. Do not enter real health information.</div>
     </aside>
@@ -192,7 +193,22 @@ function invalidate() {
   cards.replaceChildren(element("div", "Demo selections changed. Find resources to update this view.", "empty"));
   status.textContent = "Ready for a new synthetic resource search.";
   document.getElementById("match").disabled = false;
+  document.getElementById("cancel").hidden = true;
 }
+function cancelSearch() {
+  if (!pending) return;
+  invalidate();
+  status.textContent = "Search canceled. No clinical conclusions can be drawn.";
+  cards.replaceChildren(element("div", "No resources loaded. Start another synthetic search when ready.", "empty"));
+  document.getElementById("match").focus();
+}
+document.getElementById("cancel").addEventListener("click", cancelSearch);
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && pending) {
+    event.preventDefault();
+    cancelSearch();
+  }
+});
 document.getElementById("preset").addEventListener("change", event => {
   const values = presets[event.target.value];
   if (values) fields.forEach((key, index) => document.getElementById(key).value = values[index]);
@@ -208,6 +224,7 @@ document.getElementById("preferences").addEventListener("submit", async event =>
   const version = generation;
   const button = document.getElementById("match");
   button.disabled = true;
+  document.getElementById("cancel").hidden = false;
   cards.setAttribute("aria-busy", "true");
   status.textContent = "Matching against the local synthetic catalog…";
   const request = Object.fromEntries(fields.map(key => [key, document.getElementById(key).value]));
@@ -254,6 +271,7 @@ document.getElementById("preferences").addEventListener("submit", async event =>
       button.disabled = false;
       pending = null;
       cards.setAttribute("aria-busy", "false");
+      document.getElementById("cancel").hidden = true;
     }
   }
 });

@@ -86,6 +86,9 @@ python -m unittest discover -s tests -v
 ```
 
 The packaged, single-file HTML has all its styles and scripts inline. Opening it directly shows the interface but cannot perform inference: serve it through Python. Synthetic presets, bounded topic/preferences, resource cards, selected appointment questions and an optional print view are available. Changing selections clears old matches. Refresh/reset clears the question list; no browser storage is used.
+While searching, the Cancel search button or Escape aborts the request,
+restores focus to Find resources and prevents late responses from repopulating
+the page. Cancellation draws no clinical conclusion.
 
 ### Run alongside the other projects
 
@@ -370,3 +373,8 @@ CI exercises persistence, stale-model rejection, learned preference relevance, s
 CI runs on Windows and Ubuntu with Python 3.10, 3.13 and 3.14, including CLI
 artifact inspection, saved-report self-comparison with per-case regression
 checks and fixed-question selector round-trip/plaintext rendering. Tests create isolated files under ignored `models\` and remove them afterward. Runtime model artifacts are local only.
+Optional real-browser checks use Node 22+ and an explicitly isolated Chromium
+profile with an ephemeral CDP port: `node tests\browser_check.cjs
+http://127.0.0.1:APP_PORT CDP_PORT cancel`. This adds no runtime dependency.
+The check drives Escape and releases a forced late real-backend response,
+verifying cancellation, busy state, focus, loopback-only requests and no storage. Tests create isolated files under ignored `models\` and remove them afterward. Runtime model artifacts are local only.
