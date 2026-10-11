@@ -219,6 +219,7 @@ def retrieve(model, request):
     limit = validate(request)
     results = rank_resources(model, request)
     return {"notice": BANNER, "prototype": True, "synthetic_catalog": True,
+            "catalog_sha256": model["catalog_sha256"],
             "score_meaning": "Cosine text similarity, not risk, confidence or probability.",
             "resources": [{**row, "retrieval_score": round(score, 6)}
                           for score, row in results[:limit]]}
@@ -233,6 +234,7 @@ def retrieve_batch(model, requests):
     for request, limit in zip(requests, limits):
         ranked = _rank_rows(model, request, rows)
         results.append({"notice": BANNER, "prototype": True, "synthetic_catalog": True,
+                        "catalog_sha256": model["catalog_sha256"],
                         "score_meaning": "Cosine text similarity, not risk, confidence or probability.",
                         "resources": [{**row, "retrieval_score": round(score, 6)}
                                       for score, row in ranked[:limit]]})

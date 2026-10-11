@@ -135,6 +135,17 @@ async function main() {
       assert.equal(await evaluate("document.querySelector('#question-list li [data-action=\"up\"]').disabled"), true);
       assert.equal(await evaluate("document.querySelectorAll('#question-list li')[2].querySelector('[data-action=\"down\"]').disabled"), true);
       assert.equal(await evaluate("document.querySelectorAll('#cards input:checked').length"), 3);
+    } else if (scenario === "provenance") {
+      await evaluate("document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("document.querySelector('#cards input').click()");
+      const title = await evaluate("document.querySelector('#cards h3').textContent");
+      assert.ok((await evaluate("document.querySelector('#question-list .question-source').textContent")).includes(title));
+      assert.match(await evaluate("document.querySelector('#question-list .question-source').textContent"), /question 1/);
+      assert.match(await evaluate("document.getElementById('planner-provenance').textContent"), /[0-9a-f]{64}$/);
+      await evaluate("document.getElementById('clear').click()");
+      assert.equal(await evaluate("questionSources.size"), 0);
+      assert.equal(await evaluate("document.getElementById('planner-provenance').hidden"), true);
     } else {
       throw new Error("Unknown browser scenario");
     }

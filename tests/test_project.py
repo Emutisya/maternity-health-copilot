@@ -196,7 +196,7 @@ class ProjectTests(unittest.TestCase):
             result = retrieve(self.model, request)
             self.assertEqual(result["notice"], BANNER)
             self.assertEqual(set(result), {"notice", "prototype", "synthetic_catalog",
-                                          "score_meaning", "resources"})
+                                          "catalog_sha256", "score_meaning", "resources"})
             for row in result["resources"]:
                 self.assertEqual({key: value for key, value in row.items()
                                   if key != "retrieval_score"}, source[row["id"]])
