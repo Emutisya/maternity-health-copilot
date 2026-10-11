@@ -172,6 +172,24 @@ async function main() {
         limit.value = '1.5'; document.getElementById('match').click()`);
       assert.equal(await evaluate("window.__calls"), 0);
       assert.equal(await evaluate("document.activeElement.id"), "limit");
+    } else if (scenario === "response") {
+      await evaluate(`window.__realFetch = window.fetch;
+        window.fetch = async (...args) => { const result = await window.__realFetch(...args);
+          const data = await result.json(); data.resources[1].questions = 'not an array';
+          return new Response(JSON.stringify(data), {status: 200}); };
+        document.getElementById('match').click()`);
+      await wait("!document.getElementById('retry').hidden");
+      assert.equal(await evaluate("document.querySelectorAll('#cards article').length"), 0);
+      assert.match(await evaluate("document.getElementById('status').textContent"), /Unexpected local catalog response/);
+      await evaluate(`window.fetch = async (...args) => { const result = await window.__realFetch(...args);
+          const data = await result.json(); data.resources = [];
+          return new Response(JSON.stringify(data), {status: 200}); };
+        document.getElementById('retry').click()`);
+      await wait("!document.getElementById('change-selections').hidden");
+      assert.match(await evaluate("document.getElementById('cards').textContent"), /nothing about health needs/);
+      await evaluate("document.getElementById('change-selections').click()");
+      assert.equal(await evaluate("document.activeElement.id"), "stage");
+      assert.equal(await evaluate("document.getElementById('print').disabled"), true);
     } else {
       throw new Error("Unknown browser scenario");
     }
