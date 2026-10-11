@@ -24,3 +24,26 @@ def make_plan(stage, identifiers):
             "resource_ids": list(identifiers),
             "questions": [{"text": text, "sources": origins} for text, origins in questions.items()],
             "scope": "Fixed discussion questions for a qualified professional; not an individualized care plan."}
+
+
+def select_questions(stage, selections):
+    if (not isinstance(selections, list) or not 1 <= len(selections) <= 12
+            or any(not isinstance(item, dict) or set(item) != {"resource_id", "question_number"}
+                   or not isinstance(item["resource_id"], str)
+                   or type(item["question_number"]) is not int or item["question_number"] < 1
+                   for item in selections)):
+        raise ValueError("Choose one to twelve fixed resource/question-number selections.")
+    signatures = [(item["resource_id"], item["question_number"]) for item in selections]
+    if len(set(signatures)) != len(signatures):
+        raise ValueError("Question selections must be unique.")
+    identifiers = list(dict.fromkeys(item["resource_id"] for item in selections))
+    plan = make_plan(stage, identifiers)
+    lookup = {(origin["resource_id"], origin["question_number"]): question["text"]
+              for question in plan["questions"] for origin in question["sources"]}
+    if any(signature not in lookup for signature in signatures):
+        raise ValueError("Question numbers must refer to existing fixed catalog questions.")
+    questions = {}
+    for item, signature in zip(selections, signatures):
+        questions.setdefault(lookup[signature], []).append(dict(item))
+    plan["questions"] = [{"text": text, "sources": origins} for text, origins in questions.items()]
+    return plan

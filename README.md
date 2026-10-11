@@ -224,6 +224,10 @@ needs no model and assembles fixed questions from one to six unique,
 stage-compatible resource IDs. Duplicate question text is merged with all
 source resource/question numbers retained. The JSON marks human review as
 required: this is an educational conversation list, **not a care plan**.
+Alternatively, `plan --stage pregnancy --question access-guide:2 --question
+support-guide:1` selects exact 1-based question numbers, preserving the chosen
+order. Up to twelve unique picks from at most six eligible resources are
+accepted; free-text questions, unknown numbers and duplicates are rejected.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 

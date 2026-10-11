@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
-from .planning import make_plan
+from .planning import make_plan, select_questions
 from .audit import browse, compare_reports, coverage, explain, inspect_model, sensitivity, sweep
 
 
@@ -17,7 +17,9 @@ def main():
     commands.add_parser("coverage")
     planning = commands.add_parser("plan")
     planning.add_argument("--stage", choices=OPTIONS["stage"], required=True)
-    planning.add_argument("--resource", action="append", required=True)
+    selection = planning.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--resource", action="append")
+    selection.add_argument("--question", action="append", help="Fixed catalog ID and 1-based number, e.g. access-guide:2.")
     sweeping = commands.add_parser("sweep")
     sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     comparing = commands.add_parser("compare")
@@ -46,7 +48,17 @@ def main():
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
         if args.command == "plan":
-            print(json.dumps(make_plan(args.stage, args.resource), indent=2))
+            if args.question:
+                picks = []
+                for value in args.question:
+                    identifier, separator, number = value.partition(":")
+                    if not separator or not number.isascii() or not number.isdigit():
+                        raise ValueError("Use --question catalog-id:positive-number; no free text.")
+                    picks.append({"resource_id": identifier, "question_number": int(number)})
+                plan = select_questions(args.stage, picks)
+            else:
+                plan = make_plan(args.stage, args.resource)
+            print(json.dumps(plan, indent=2))
             return
         if args.command == "coverage":
             print(json.dumps(coverage(), indent=2))

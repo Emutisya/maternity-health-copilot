@@ -8,10 +8,22 @@ from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
 from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sensitivity, sweep
-from maternity_copilot.planning import make_plan
+from maternity_copilot.planning import make_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_question_selection_preserves_chosen_order_without_free_text(self):
+        picks = [{"resource_id": "support-guide", "question_number": 2},
+                 {"resource_id": "access-guide", "question_number": 1}]
+        plan = select_questions("pregnancy", picks)
+        self.assertEqual([row["sources"][0] for row in plan["questions"]], picks)
+        for bad in ([picks[0], picks[0]],
+                    [{"resource_id": "support-guide", "question_number": 99}],
+                    [{"resource_id": "support-guide", "question_number": True}],
+                    [{**picks[0], "text": "arbitrary"}]):
+            with self.assertRaises(ValueError):
+                select_questions("pregnancy", bad)
+
     def test_question_plan_contains_only_eligible_authored_questions(self):
         plan = make_plan("pregnancy", ["access-guide", "support-guide"])
         self.assertTrue(plan["human_review_required"])
