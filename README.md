@@ -307,6 +307,11 @@ conversation list with per-question sources, catalog hash, human-review
 requirement and the safety notice at both ends. Redirect it to a local text
 file if needed. The renderer refuses modified question text; this is not a
 record of a real appointment or a clinically approved document.
+`plan-merge --input models\a.json --input models\b.json` merges two to four
+validated synthetic selector files for the same stage, deduplicating picks
+and preserving first occurrence. The six-resource/twelve-pick bounds still
+apply. Optional `--output` saves a selector file; `--text` prints the list.
+Merging does not remove the human-review requirement.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 

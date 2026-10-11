@@ -13,10 +13,22 @@ from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, DATA, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
 from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
-from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
+from maternity_copilot.planning import make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_merging_question_lists_deduplicates_and_rejects_stage_changes(self):
+        first = make_plan("pregnancy", ["access-guide"])
+        second = make_plan("pregnancy", ["access-guide", "support-guide"])
+        merged = merge_plans([first, second])
+        self.assertEqual(merged, second)
+        self.assertTrue(merged["human_review_required"])
+        with self.assertRaisesRegex(ValueError, "same stage"):
+            merge_plans([first, make_plan("postpartum", ["support-guide"])])
+        for count in (1, 5):
+            with self.assertRaises(ValueError):
+                merge_plans([first] * count)
+
     def test_compare_cli_detects_valid_ranking_regression_with_exit_one(self):
         directory = Path("models") / ("gate-" + uuid.uuid4().hex)
         before_path, after_path = directory / "before.json", directory / "after.json"

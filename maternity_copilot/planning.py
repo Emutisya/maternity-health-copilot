@@ -102,3 +102,20 @@ def read_plan(path):
     if plan["catalog_sha256"] != capsule["catalog_sha256"]:
         raise ValueError("The catalog changed. Review current questions and create a new selection file.")
     return plan
+
+
+def merge_plans(plans):
+    if not isinstance(plans, list) or not 2 <= len(plans) <= 4:
+        raise ValueError("Merge two to four synthetic fixed-question plans.")
+    checked = [checked_plan(plan) for plan in plans]
+    if len({plan["stage"] for plan in checked}) != 1:
+        raise ValueError("Merged plans must use the same stage; review stage changes separately.")
+    selections, seen = [], set()
+    for plan in checked:
+        for question in plan["questions"]:
+            for origin in question["sources"]:
+                signature = (origin["resource_id"], origin["question_number"])
+                if signature not in seen:
+                    selections.append(origin)
+                    seen.add(signature)
+    return select_questions(checked[0]["stage"], selections)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
-from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
+from .planning import make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 from .audit import METRICS, browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
 
 
@@ -35,6 +35,10 @@ def main():
     restoring = commands.add_parser("plan-read")
     restoring.add_argument("--input", required=True)
     restoring.add_argument("--text", action="store_true")
+    merging = commands.add_parser("plan-merge")
+    merging.add_argument("--input", action="append", required=True)
+    merging.add_argument("--output")
+    merging.add_argument("--text", action="store_true")
     sweeping = commands.add_parser("sweep")
     sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     grouping = commands.add_parser("evaluate-groups")
@@ -73,6 +77,16 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "plan-merge":
+            if not 2 <= len(args.input) <= 4:
+                raise ValueError("Merge two to four synthetic selection files.")
+            plan = merge_plans([read_plan(path) for path in args.input])
+            if args.output:
+                if Path(args.output).resolve() == Path(args.model).resolve():
+                    raise ValueError("Selection output must not replace the model.")
+                save_plan(args.output, plan)
+            print(render_plan(plan), end="") if args.text else print(json.dumps(plan, indent=2))
+            return
         if args.command == "catalog-audit":
             print(json.dumps(catalog_audit(), indent=2))
             return
