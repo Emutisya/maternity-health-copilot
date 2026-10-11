@@ -7,10 +7,19 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, explain, inspect_model, read_report
+from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_coverage_exposes_all_unrepresented_bounded_queries(self):
+        report = coverage()
+        self.assertEqual(report["possible_queries"], 48)
+        self.assertEqual(report["benchmark_queries"] + len(report["unrepresented_queries"]), 48)
+        self.assertEqual(len({tuple(case.values()) for case in report["unrepresented_queries"]}), 36)
+        self.assertTrue(all(cell["resource_ids"] for cell in report["stage_topic_cells"]))
+        self.assertEqual(sum(report["selection_counts"]["stage"].values()), 12)
+        self.assertTrue(all(count > 0 for count in report["relevance_label_counts"].values()))
+
     def test_saved_report_comparison_rejects_forged_metrics_and_mismatched_k(self):
         directory = Path("models") / ("compare-" + uuid.uuid4().hex)
         path, other = directory / "before.json", directory / "after.json"

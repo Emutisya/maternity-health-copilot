@@ -203,6 +203,11 @@ and benchmark, the same split and k. It allows different model hashes, but does
 not load those models or establish statistical/clinical significance. A report
 hash is an integrity check, not an author signature.
 
+`coverage` needs no model: it audits the 48 possible bounded selections against
+the 12 authored benchmark cases, lists unrepresented combinations, counts
+relevance labels per resource and reports stage/topic content gaps. Coverage
+here means schema/catalog coverage, never population or clinical coverage.
+
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 
 ## From working core to an accessible care-preparation layer

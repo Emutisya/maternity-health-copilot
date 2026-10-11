@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
-from .audit import browse, compare_reports, explain, inspect_model
+from .audit import browse, compare_reports, coverage, explain, inspect_model
 
 
 def main():
@@ -13,6 +13,7 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("train")
     commands.add_parser("inspect")
+    commands.add_parser("coverage")
     comparing = commands.add_parser("compare")
     comparing.add_argument("--before", required=True)
     comparing.add_argument("--after", required=True)
@@ -35,6 +36,9 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "coverage":
+            print(json.dumps(coverage(), indent=2))
+            return
         if args.command == "compare":
             print(json.dumps(compare_reports(args.before, args.after), indent=2))
             return

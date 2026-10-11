@@ -1,11 +1,12 @@
 """Deterministic local inspection of authored synthetic educational content."""
 
 import hashlib
+import itertools
 import math
 import re
 from pathlib import Path
 
-from .core import BANNER, OPTIONS, catalog, decode_json, evaluate, fingerprint, fitted_model, load_model, rank_resources, validate, vector
+from .core import BANNER, OPTIONS, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, load_model, rank_resources, validate, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -63,6 +64,33 @@ def explain(model, request):
 
 
 METRICS = ("recall_at_k", "ndcg_at_k", "mrr_at_k", "precision_at_k", "map_at_k")
+
+
+def coverage():
+    rows = catalog()
+    benchmark = load_benchmark(rows)
+    cases = [case for split in benchmark.values() for case in split]
+    signatures = {tuple(case[key] for key in OPTIONS) for case in cases}
+    missing = [dict(zip(OPTIONS, values)) for values in itertools.product(*OPTIONS.values())
+               if values not in signatures]
+    return {"notice": BANNER, "synthetic_catalog": True,
+            "catalog_sha256": fingerprint(rows), "benchmark_sha256": fingerprint(benchmark),
+            "possible_queries": math.prod(len(values) for values in OPTIONS.values()),
+            "benchmark_queries": len(cases), "unrepresented_queries": missing,
+            "selection_counts": {
+                key: {value: sum(case[key] == value for case in cases) for value in allowed}
+                for key, allowed in OPTIONS.items()},
+            "relevance_label_counts": {
+                row["id"]: sum(row["id"] in case["relevant"] for case in cases)
+                for row in sorted(rows, key=lambda item: item["id"])},
+            "stage_topic_cells": [
+                {"stage": stage, "topic": topic,
+                 "resource_ids": sorted(row["id"] for row in rows
+                                        if stage in row["stages"] and row["topic"] == topic),
+                 "benchmark_queries": sum(case["stage"] == stage and case["topic"] == topic
+                                          for case in cases)}
+                for stage, topic in itertools.product(OPTIONS["stage"], OPTIONS["topic"])],
+            "meaning": "Coverage of authored selections and labels, not real users or clinical coverage."}
 
 
 def read_report(path):
