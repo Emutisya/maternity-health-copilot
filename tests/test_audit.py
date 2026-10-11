@@ -16,6 +16,19 @@ from maternity_copilot.planning import make_plan, read_plan, render_plan, save_p
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_ranking_diagnostics_separate_exact_ties_from_display_collisions(self):
+        model = fitted_model(catalog())
+        source = catalog()[:4]
+        ranked = list(zip((.5000002, .5000001, .5, .5), source))
+        request = {"stage": "pregnancy", "topic": "support", "format": "guide", "focus": "support", "limit": 3}
+        with patch("maternity_copilot.audit.rank_resources", return_value=ranked):
+            report = explain(model, request)
+        self.assertTrue(report["cutoff"]["exact_tie"])
+        self.assertEqual(report["cutoff"]["gap"], 0)
+        self.assertEqual(report["exact_score_ties"], [[row["id"] for row in source[2:]]])
+        self.assertEqual(report["display_rounding_collisions"], [[row["id"] for row in source]])
+        self.assertGreater(report["top_margin"], 0)
+
     def test_baselines_expose_direct_metadata_overlap_without_inventing_learning(self):
         model = fitted_model(catalog())
         report = evaluate_baselines(model, k=1)

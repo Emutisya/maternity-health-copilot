@@ -84,6 +84,7 @@ def inspect_model(path):
 
 
 def explain(model, request):
+    limit = validate(request)
     ranked = rank_resources(model, request)
     query = vector(" ".join(request[key] for key in OPTIONS), model["idf"])
     rows = []
@@ -95,9 +96,24 @@ def explain(model, request):
                      "term_contributions": contributions,
                      "preference_matches": {key: row[key] == request[key]
                                             for key in ("topic", "format", "focus")}})
+    exact_groups, displayed_groups = {}, {}
+    for score, row in ranked:
+        exact_groups.setdefault(score, []).append(row["id"])
+        displayed_groups.setdefault(round(score, 6), []).append((score, row["id"]))
+    included = ranked[min(limit, len(ranked)) - 1][0] if ranked else None
+    excluded = ranked[limit][0] if len(ranked) > limit else None
     return {"notice": BANNER, "synthetic_catalog": True,
             "catalog_sha256": model["catalog_sha256"],
             "query_terms": dict(sorted(query.items())), "ranking": rows,
+            "top_margin": ranked[0][0] - ranked[1][0] if len(ranked) > 1 else None,
+            "cutoff": {"limit": limit, "last_included_score": included,
+                       "first_excluded_score": excluded,
+                       "gap": included - excluded if excluded is not None else None,
+                       "exact_tie": included == excluded if excluded is not None else False},
+            "exact_score_ties": [ids for _, ids in sorted(exact_groups.items(), reverse=True) if len(ids) > 1],
+            "display_rounding_collisions": [[identifier for _, identifier in items]
+                                            for _, items in sorted(displayed_groups.items(), reverse=True)
+                                            if len({score for score, _ in items}) > 1],
             "excluded_stage_ids": sorted(row["id"] for row in catalog()
                                          if request["stage"] not in row["stages"]),
             "ordering": "Full-precision cosine descending, then resource ID ascending.",

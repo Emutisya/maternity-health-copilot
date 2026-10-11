@@ -174,6 +174,9 @@ CLI file-permission/space failures and deeply nested local JSON exit with code
 stage-eligible ranks at full precision, per-token cosine contributions, exact
 preference matches and stage-excluded IDs. Contributions sum to the score.
 Metadata matches explain preferences; they do not establish medical relevance.
+Explanations also expose the top-score margin, cutoff gap, exact-score tie
+groups and distinct scores that collide after six-decimal display rounding.
+These diagnose numerical selection stability, not uncertainty about health.
 
 **Model:** trainable, unsupervised TF-IDF vector-space retrieval baseline implemented in the Python standard library. It is not a generative model or a trained clinical predictor.
 
