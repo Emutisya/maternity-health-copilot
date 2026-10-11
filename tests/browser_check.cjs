@@ -146,6 +146,21 @@ async function main() {
       await evaluate("document.getElementById('clear').click()");
       assert.equal(await evaluate("questionSources.size"), 0);
       assert.equal(await evaluate("document.getElementById('planner-provenance').hidden"), true);
+    } else if (scenario === "print-review") {
+      await evaluate("document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("document.querySelector('#cards input').click(); window.__prints = 0; window.print = () => window.__prints++");
+      assert.equal(await evaluate("document.getElementById('print').disabled"), true);
+      await evaluate("document.getElementById('review').click(); document.getElementById('print').click()");
+      assert.equal(await evaluate("window.__prints"), 1);
+      await evaluate("document.querySelectorAll('#cards input')[1].click(); document.getElementById('print').click()");
+      assert.equal(await evaluate("window.__prints"), 1);
+      assert.equal(await evaluate("document.getElementById('review').checked"), false);
+      assert.equal(await evaluate("document.getElementById('print-warning').hidden"), false);
+      await call("Emulation.setEmulatedMedia", {media: "print"});
+      assert.notEqual(await evaluate("getComputedStyle(document.getElementById('print-warning')).display"), "none");
+      assert.equal(await evaluate("getComputedStyle(document.getElementById('review').closest('label')).display"), "none");
+      await call("Emulation.setEmulatedMedia", {media: ""});
     } else {
       throw new Error("Unknown browser scenario");
     }

@@ -162,10 +162,12 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
         <h2 id="planner-title" tabindex="-1">03 / Appointment question list</h2>
         <p class="no-print">Select questions from the resource cards. This list exists only in this page's memory and is cleared on refresh. Printing creates a copy you control.</p>
         <p>Synthetic discussion prompts only. A qualified professional should guide any care decisions.</p>
+        <p id="print-warning">Unreviewed synthetic question list. Not medical advice. Review with a qualified professional.</p>
         <ol id="question-list"></ol>
         <p id="planner-provenance" hidden></p>
         <p id="planner-count" class="no-print" role="status" aria-live="polite">0 fixed questions selected.</p>
         <p id="empty-list">No questions selected yet.</p>
+        <label class="question no-print"><input id="review" type="checkbox" disabled><span>I have reviewed this synthetic question list and understand it is not a care plan or medical advice.</span></label>
         <button id="print" class="secondary no-print" type="button" disabled>Print question list</button>
         <button id="clear-questions" class="secondary no-print" type="button" disabled>Clear question list only</button>
         <button id="clear" class="secondary no-print" type="button">Reset demo</button>
@@ -213,6 +215,9 @@ function moveQuestion(question, delta) {
   updateQuestions(index + delta, delta < 0 ? "up" : "down");
 }
 function updateQuestions(focusIndex = null, focusAction = "remove") {
+  document.getElementById("review").checked = false;
+  document.getElementById("review").disabled = selected.size === 0;
+  document.getElementById("print-warning").hidden = false;
   const list = document.getElementById("question-list");
   list.replaceChildren(...Array.from(selected, (question, index) => {
     const item = element("li");
@@ -241,7 +246,7 @@ function updateQuestions(focusIndex = null, focusAction = "remove") {
     return item;
   }));
   document.getElementById("empty-list").hidden = selected.size > 0;
-  document.getElementById("print").disabled = selected.size === 0;
+  document.getElementById("print").disabled = true;
   document.getElementById("clear-questions").disabled = selected.size === 0;
   document.getElementById("planner-count").textContent = `${selected.size} fixed question${selected.size === 1 ? "" : "s"} selected.`;
   document.getElementById("planner-provenance").hidden = selected.size === 0;
@@ -382,7 +387,16 @@ document.getElementById("preferences").addEventListener("submit", async event =>
     }
   }
 });
-document.getElementById("print").addEventListener("click", () => window.print());
+document.getElementById("review").addEventListener("change", event => {
+  document.getElementById("print").disabled = selected.size === 0 || !event.target.checked;
+  document.getElementById("print-warning").hidden = event.target.checked && selected.size > 0;
+});
+document.getElementById("print").addEventListener("click", () => {
+  if (selected.size && document.getElementById("review").checked) window.print();
+});
+window.addEventListener("beforeprint", () => {
+  document.getElementById("print-warning").hidden = selected.size > 0 && document.getElementById("review").checked;
+});
 document.getElementById("clear").addEventListener("click", () => {
   document.getElementById("preferences").reset();
   document.getElementById("preset").value = "custom";

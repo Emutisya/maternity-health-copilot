@@ -179,6 +179,12 @@ questions retain fixed source titles, IDs and 1-based numbers plus that
 catalog hash in the printable list. Multiple matching sources are retained
 without duplicate question text. Reset/invalidation clears this provenance;
 browser scenario `provenance` verifies source/hash display and clearing. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
+The Print button requires explicit acknowledgment that the selected synthetic
+questions were reviewed and are not a care plan or medical advice. Any
+selection/removal/reorder resets acknowledgment. This is a reader check, not
+professional content approval. Browser/OS printing can bypass the button; an
+unreviewed warning remains visible in that print view. Browser scenario
+`print-review` verifies gating, invalidation and print-media warning visibility. Unknown keys, symptoms even as an extra field, arbitrary strings, missing fields and malformed JSON return HTTP 400 without echoing supplied values. Wrong media types return 415; unknown routes return 404. Requests over 2,048 bytes are rejected.
 
 The server binds only to `127.0.0.1`, validates Host and browser Origin, provides no cross-origin access, disables caching and request logs, and never writes requests to disk. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 Duplicate Host, Origin and Content-Type headers are rejected rather than
