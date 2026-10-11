@@ -8,6 +8,15 @@ from urllib.parse import urlsplit
 from .core import BANNER, OPTIONS, retrieve
 
 
+def unique_fields(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON fields are not accepted.")
+        result[key] = value
+    return result
+
+
 def make_server(model, port=8765):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -61,15 +70,24 @@ def make_server(model, port=8765):
             try:
                 if self.headers.get("Transfer-Encoding"):
                     raise ValueError("Transfer encoding is not accepted.")
-                size = int(self.headers.get("Content-Length", "0"))
+                length = self.headers.get("Content-Length", "")
+                if (len(self.headers.get_all("Content-Length", [])) != 1
+                        or not length.isascii() or not length.isdigit()):
+                    raise ValueError("One decimal Content-Length is required.")
+                size = int(length)
                 if not 1 <= size <= 2048:
                     raise ValueError("Request size must be between 1 and 2048 bytes.")
                 self.connection.settimeout(5)
                 raw = self.rfile.read(size)
-                payload = json.loads(raw)
+                if len(raw) != size:
+                    raise ValueError("Incomplete request body.")
+                payload = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_fields)
                 result = retrieve(model, payload)
-            except (ValueError, UnicodeError, TimeoutError):
+            except (ValueError, UnicodeError, RecursionError):
                 self.send(400, {"error": "Invalid input. Only the documented bounded selections are accepted; no symptoms or personal data.", "notice": BANNER})
+                return
+            except TimeoutError:
+                self.send(408, {"error": "Request body timed out. Send a complete JSON request.", "notice": BANNER})
                 return
             self.send(200, result)
 

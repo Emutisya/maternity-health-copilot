@@ -171,6 +171,16 @@ class ProjectTests(unittest.TestCase):
             self.assertEqual(json.load(response)["status"], "ready")
 
     def test_http_invalid_inputs_and_origin(self):
+        invalid = [
+            json.dumps(REQUEST).encode("utf-16"),
+            ('{"limit":1,"limit":2,' + json.dumps(REQUEST)[1:]).encode(),
+            b"[" * 1000 + b"]" * 1000,
+        ]
+        for body in invalid:
+            with self.assertRaises(HTTPError) as error:
+                self.post(body)
+            self.assertEqual(error.exception.code, 400)
+            error.exception.close()
         for body in (b"not-json", b"\xff", b"[]",
                      json.dumps({**REQUEST, "symptoms": "pain"}).encode(),
                      b"x" * 2049):
