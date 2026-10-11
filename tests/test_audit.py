@@ -6,11 +6,19 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import catalog, decode_json, evaluate, fitted_model, retrieve, train
+from maternity_copilot.core import catalog, decode_json, evaluate, fitted_model, load_benchmark, retrieve, train
 from maternity_copilot.audit import browse, explain, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_benchmark_rejects_unbounded_extras(self):
+        benchmark = load_benchmark()
+        rows = catalog()
+        benchmark["held_out"][0]["notes"] = "Not a bounded selection."
+        with patch("maternity_copilot.core.decode_json", return_value=benchmark):
+            with self.assertRaisesRegex(ValueError, "only bounded"):
+                load_benchmark(rows)
+
     def test_evaluation_uses_one_validated_catalog_snapshot(self):
         rows = catalog()
         model = fitted_model(rows)

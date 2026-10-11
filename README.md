@@ -176,6 +176,8 @@ Local catalog, benchmark and model JSON reject duplicate keys and nonfinite numb
 Each evaluation uses one validated in-memory catalog snapshot for every query
 and its manifest. Mid-run disk edits cannot mix old and new content in a report;
 the next evaluation detects drift and requires retraining.
+Benchmark cases must contain exactly the four bounded selections and `relevant`
+resource IDs; free-form metadata is rejected, not retained in reports.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 

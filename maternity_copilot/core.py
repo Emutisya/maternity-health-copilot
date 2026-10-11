@@ -190,20 +190,18 @@ def retrieve(model, request):
                           for score, row in results[:limit]]}
 
 
-def evaluate(model, split="held_out", k=3):
-    if split not in ("development", "held_out") or type(k) is not int or not 1 <= k <= 6:
-        raise ValueError("Use development or held_out, and k from 1 to 6.")
+def load_benchmark(rows=None):
     benchmark = decode_json((DATA / "benchmark.json").read_text(encoding="utf-8"))
     if not isinstance(benchmark, dict) or set(benchmark) != {"development", "held_out"}:
         raise ValueError("Benchmark must contain development and held_out splits.")
     seen = set()
-    rows = model_catalog(model)
+    rows = catalog() if rows is None else rows
     for cases in benchmark.values():
         if not isinstance(cases, list) or not cases:
             raise ValueError("Each benchmark split must contain at least one query.")
         for case in cases:
-            if not isinstance(case, dict) or not set(OPTIONS) <= set(case):
-                raise ValueError("Benchmark query is missing bounded selections.")
+            if not isinstance(case, dict) or set(case) != set(OPTIONS) | {"relevant"}:
+                raise ValueError("Benchmark queries require only bounded selections and relevance IDs.")
             request = {key: case[key] for key in OPTIONS}
             validate(request)
             signature = tuple(request.values())
@@ -216,6 +214,14 @@ def evaluate(model, split="held_out", k=3):
                     or any(not isinstance(identifier, str) for identifier in relevant)
                     or len(set(relevant)) != len(relevant) or not set(relevant) <= eligible):
                 raise ValueError("Invalid benchmark relevance labels.")
+    return benchmark
+
+
+def evaluate(model, split="held_out", k=3):
+    if split not in ("development", "held_out") or type(k) is not int or not 1 <= k <= 6:
+        raise ValueError("Use development or held_out, and k from 1 to 6.")
+    rows = model_catalog(model)
+    benchmark = load_benchmark(rows)
     recalls, ndcgs, reciprocal_ranks, cases = [], [], [], []
     for case in benchmark[split]:
         request = {key: case[key] for key in OPTIONS}
