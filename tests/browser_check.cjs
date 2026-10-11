@@ -41,12 +41,14 @@ async function main() {
       if (await evaluate(expression)) return;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    throw new Error(`Browser condition timed out: ${expression}`);
+    throw new Error(`Browser condition timed out: ${expression}; ` + await evaluate(
+      "JSON.stringify({url:location.href,status:document.getElementById('status')?.textContent,focus:document.activeElement.id})"));
   };
   try {
     await call("Network.enable");
-    await call("Page.navigate", {url: base});
-    await wait("document.readyState === 'complete' && typeof invalidate === 'function'");
+    const pageUrl = base + "/?browserCheck=" + Date.now();
+    await call("Page.navigate", {url: pageUrl});
+    await wait(`location.href === ${JSON.stringify(pageUrl)} && document.readyState === 'complete' && typeof invalidate === 'function'`);
     if (scenario === "cancel") {
       await evaluate(`window.__realFetch = window.fetch;
         window.fetch = (...args) => new Promise(resolve => {
@@ -94,6 +96,19 @@ async function main() {
       await wait("document.querySelectorAll('#cards article').length === 3");
       assert.equal(await evaluate("document.getElementById('retry').hidden"), true);
       assert.equal(await evaluate("document.getElementById('match').disabled"), false);
+    } else if (scenario === "navigation") {
+      await evaluate("document.querySelector('.skip-link').focus()");
+      await call("Input.dispatchKeyEvent", {type: "keyDown", key: "Enter", code: "Enter", text: "\r", windowsVirtualKeyCode: 13});
+      await call("Input.dispatchKeyEvent", {type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13});
+      assert.equal(await evaluate("document.activeElement.id"), "demo-title");
+      await evaluate("document.getElementById('match').focus()");
+      await call("Input.dispatchKeyEvent", {type: "keyDown", key: "Enter", code: "Enter", text: "\r", windowsVirtualKeyCode: 13});
+      await call("Input.dispatchKeyEvent", {type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13});
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      assert.equal(await evaluate("document.activeElement.id"), "results-title");
+      await evaluate("document.querySelector('nav a[href=\"#planner-title\"]').focus()");
+      await call("Input.dispatchKeyEvent", {type: "keyDown", key: "Enter", code: "Enter", text: "\r", windowsVirtualKeyCode: 13});
+      assert.equal(await evaluate("document.activeElement.id"), "planner-title");
     } else {
       throw new Error("Unknown browser scenario");
     }

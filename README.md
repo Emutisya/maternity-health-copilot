@@ -99,6 +99,11 @@ invalid selections (reset/reselect) and unreachable backend failures. An
 explicit Retry button repeats only the current bounded synthetic selections;
 it never retries automatically. Browser scenario `recovery` exercises a 503
 then a successful real-backend retry without stale cards.
+A keyboard-visible skip link and section navigation move focus to demo,
+resource and planner headings. Keyboard-initiated searches focus the results
+heading on completion only if focus has not moved to another control; sticky
+notice spacing keeps headings visible. Browser scenario `navigation` uses
+real Enter key events to verify these focus destinations.
 
 ### Run alongside the other projects
 

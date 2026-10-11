@@ -73,6 +73,11 @@ main { max-width: 1240px; padding: 40px 24px; margin: auto; }
 .eyebrow { color: var(--cp-accent); font-weight: 700; letter-spacing: .12em; font-size: .75rem; text-transform: uppercase; }
 h1 { font-size: clamp(2rem, 4vw, 3.2rem); letter-spacing: -.04em; line-height: 1.15; margin: 12px 0; }
 h2 { font-size: 1.25rem; margin: 0 0 12px; }
+h2 { scroll-margin-top: 100px; }
+.skip-link { position: fixed; left: 12px; top: 12px; z-index: 3; transform: translateY(-200%); padding: 12px; background: var(--cp-surface); color: var(--cp-link); border: 2px solid var(--cp-link); }
+.skip-link:focus { transform: translateY(0); }
+.section-links { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0; }
+.section-links a { color: var(--cp-link); }
 h3 { font-size: 1.1rem; line-height: 1.4; margin: 12px 0; }
 p { margin: 8px 0 16px; }
 .intro { max-width: 760px; color: var(--cp-text-muted); }
@@ -111,15 +116,17 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
 </style>
 </head>
 <body>
+<a class="skip-link no-print" href="#demo-title">Skip to demo selections</a>
 <div class="banner" role="note"><strong>Not medical advice.</strong> For symptoms or concerns, contact a qualified healthcare professional. If you think there is an emergency, contact local emergency services.</div>
 <main>
   <div class="eyebrow">AI for Health / Education only</div>
   <h1>Maternity Health Copilot</h1>
   <p class="intro">Find conversation starters, not clinical answers. Explore a synthetic educational catalog and prepare questions to discuss with a qualified healthcare professional.</p>
   <div class="no-print"><span class="pill">Research prototype</span><span class="pill">Synthetic personas &amp; resources</span><span class="pill">Local TF-IDF retrieval</span></div>
+  <nav class="section-links no-print" aria-label="Demo sections"><a href="#demo-title">Demo selections</a><a href="#results-title">Educational resources</a><a href="#planner-title">Question list</a></nav>
   <div class="layout">
     <aside class="panel">
-      <h2>01 / Explore a demo</h2>
+      <h2 id="demo-title" tabindex="-1">01 / Explore a demo</h2>
       <p>No personal details. Choose only fictional demonstration preferences.</p>
       <label for="preset">Synthetic preset</label>
       <select id="preset">
@@ -143,12 +150,12 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
       <div class="note">This is not symptom screening, diagnosis, triage or treatment. Nothing here assesses whether you are safe. Do not enter real health information.</div>
     </aside>
     <section aria-label="Educational resources and question planner">
-      <div class="results-header"><div><h2>02 / Explore resources</h2><small>Ranked by learned text similarity, not medical relevance.</small></div><span class="pill">12 synthetic resources</span></div>
+      <div class="results-header"><div><h2 id="results-title" tabindex="-1">02 / Explore resources</h2><small>Ranked by learned text similarity, not medical relevance.</small></div><span class="pill">12 synthetic resources</span></div>
       <p id="status" role="status" aria-live="polite">Choose a demo and find resources to begin.</p>
       <button id="retry" class="secondary no-print" type="button" hidden>Retry the same synthetic selections</button>
       <div id="cards" aria-busy="false"><div class="empty">Your educational conversation starters will appear here. No information is sent outside the local Python backend.</div></div>
       <section class="panel" aria-labelledby="planner-title">
-        <h2 id="planner-title">03 / Appointment question list</h2>
+        <h2 id="planner-title" tabindex="-1">03 / Appointment question list</h2>
         <p class="no-print">Select questions from the resource cards. This list exists only in this page's memory and is cleared on refresh. Printing creates a copy you control.</p>
         <p>Synthetic discussion prompts only. A qualified professional should guide any care decisions.</p>
         <ol id="question-list"></ol>
@@ -246,6 +253,7 @@ document.getElementById("preferences").addEventListener("submit", async event =>
     return;
   }
   const button = document.getElementById("match");
+  const focusOnResults = document.activeElement === button;
   button.disabled = true;
   document.getElementById("cancel").hidden = false;
   cards.setAttribute("aria-busy", "true");
@@ -287,6 +295,9 @@ document.getElementById("preferences").addEventListener("submit", async event =>
       cards.append(card);
     });
     status.textContent = `${data.resources.length} educational resources matched. Similarity is not risk, confidence or probability.`;
+    if (focusOnResults && (document.activeElement === button || document.activeElement === document.body)) {
+      document.getElementById("results-title").focus();
+    }
   } catch (error) {
     if (version === generation) {
       status.textContent = error.name === "TimeoutError" ? "The local request timed out. Check the Python server and try again." :
