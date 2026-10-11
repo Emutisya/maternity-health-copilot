@@ -6,11 +6,24 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import catalog, decode_json, fitted_model, retrieve, train
+from maternity_copilot.core import catalog, decode_json, evaluate, fitted_model, retrieve, train
 from maternity_copilot.audit import browse, explain, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_evaluation_uses_one_validated_catalog_snapshot(self):
+        rows = catalog()
+        model = fitted_model(rows)
+        with patch("maternity_copilot.core.catalog", return_value=rows) as read:
+            report = evaluate(model)
+        self.assertEqual(read.call_count, 1)
+        self.assertEqual(report["queries"], 6)
+        changed = copy.deepcopy(rows)
+        changed[0]["summary"] += " Updated."
+        with patch("maternity_copilot.core.catalog", return_value=changed):
+            with self.assertRaisesRegex(ValueError, "train"):
+                evaluate(model)
+
     def test_explanation_reconciles_scores_and_selection_order(self):
         model = fitted_model(catalog())
         request = {"stage": "pregnancy", "topic": "support", "format": "guide", "focus": "support"}

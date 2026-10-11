@@ -165,6 +165,10 @@ def model_catalog(model):
 def rank_resources(model, request):
     validate(request)
     rows = model_catalog(model)
+    return _rank_rows(model, request, rows)
+
+
+def _rank_rows(model, request, rows):
     query = vector(" ".join(request[key] for key in OPTIONS), model["idf"])
     results = []
     for row in rows:
@@ -193,7 +197,7 @@ def evaluate(model, split="held_out", k=3):
     if not isinstance(benchmark, dict) or set(benchmark) != {"development", "held_out"}:
         raise ValueError("Benchmark must contain development and held_out splits.")
     seen = set()
-    rows = catalog()
+    rows = model_catalog(model)
     for cases in benchmark.values():
         if not isinstance(cases, list) or not cases:
             raise ValueError("Each benchmark split must contain at least one query.")
@@ -215,7 +219,7 @@ def evaluate(model, split="held_out", k=3):
     recalls, ndcgs, reciprocal_ranks, cases = [], [], [], []
     for case in benchmark[split]:
         request = {key: case[key] for key in OPTIONS}
-        ids = [row["id"] for row in retrieve(model, {**request, "limit": k})["resources"]]
+        ids = [row["id"] for _, row in _rank_rows(model, request, rows)[:k]]
         gold = set(case["relevant"])
         hits = [int(identifier in gold) for identifier in ids]
         recalls.append(sum(hits) / len(gold))
