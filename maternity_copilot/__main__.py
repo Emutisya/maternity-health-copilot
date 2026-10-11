@@ -5,7 +5,7 @@ from pathlib import Path
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
-from .audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep
+from .audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep
 
 
 def main():
@@ -15,6 +15,7 @@ def main():
     commands.add_parser("train")
     commands.add_parser("inspect")
     commands.add_parser("coverage")
+    commands.add_parser("catalog-audit")
     resource_comparison = commands.add_parser("compare-resources")
     resource_comparison.add_argument("--stage", choices=OPTIONS["stage"], required=True)
     resource_comparison.add_argument("--resource", action="append", required=True)
@@ -68,6 +69,9 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "catalog-audit":
+            print(json.dumps(catalog_audit(), indent=2))
+            return
         if args.command == "compare-resources":
             print(json.dumps(compare_resources(args.stage, args.resource), indent=2))
             return

@@ -11,11 +11,22 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep
+from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_catalog_review_audit_retains_duplicate_question_provenance(self):
+        rows = copy.deepcopy(catalog())
+        rows[1]["questions"][0] = rows[0]["questions"][0]
+        with patch("maternity_copilot.audit.catalog", return_value=rows):
+            report = catalog_audit()
+        self.assertEqual(report["question_count"] - report["unique_questions"], 1)
+        self.assertEqual(len(report["shared_questions"][0]["sources"]), 2)
+        self.assertEqual(len(report["resources"]), 12)
+        self.assertTrue(report["human_review_required"])
+        self.assertIn("not undergone clinical review", report["review_status"])
+
     def test_ranking_diagnostics_separate_exact_ties_from_display_collisions(self):
         model = fitted_model(catalog())
         source = catalog()[:4]

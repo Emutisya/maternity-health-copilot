@@ -4,7 +4,7 @@ import itertools
 import math
 import re
 
-from .core import BANNER, OPTIONS, _evaluate_snapshot, _rank_rows, catalog, evaluate, fingerprint, fitted_model, load_benchmark, load_model_snapshot, model_catalog, rank_resources, read_json, validate, vector
+from .core import BANNER, OPTIONS, _evaluate_snapshot, _rank_rows, catalog, document, evaluate, fingerprint, fitted_model, load_benchmark, load_model_snapshot, model_catalog, rank_resources, read_json, tokens, validate, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -68,6 +68,30 @@ def related_resources(model, stage, identifier, limit=3):
             "resources": [{**row, "retrieval_score": round(score, 6)}
                           for score, row in candidates[:limit]],
             "meaning": "Document-to-document lexical similarity only, not a suggested care pathway."}
+
+
+def catalog_audit():
+    rows = catalog()
+    question_sources, duplicate_documents = {}, {}
+    for row in rows:
+        duplicate_documents.setdefault(tuple(tokens(document(row))), []).append(row["id"])
+        for index, question in enumerate(row["questions"], 1):
+            question_sources.setdefault(question, []).append(
+                {"resource_id": row["id"], "question_number": index})
+    return {"notice": BANNER, "synthetic_catalog": True,
+            "catalog_sha256": fingerprint(rows), "human_review_required": True,
+            "resources": [{"id": row["id"], "content_sha256": fingerprint(row),
+                           "document_tokens": len(tokens(document(row))),
+                           "unique_document_tokens": len(set(tokens(document(row)))),
+                           "question_count": len(row["questions"])}
+                          for row in sorted(rows, key=lambda item: item["id"])],
+            "question_count": sum(len(row["questions"]) for row in rows),
+            "unique_questions": len(question_sources),
+            "shared_questions": [{"text": text, "sources": origins}
+                                 for text, origins in sorted(question_sources.items()) if len(origins) > 1],
+            "identical_token_documents": [ids for _, ids in sorted(duplicate_documents.items()) if len(ids) > 1],
+            "review_status": "Demonstration content has not undergone clinical review.",
+            "meaning": "Structural review workload and lexical duplication only, not content approval."}
 
 
 def inspect_model(path):

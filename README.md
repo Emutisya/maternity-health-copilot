@@ -159,6 +159,11 @@ document-to-document cosine similarity to explore other eligible catalog
 entries. It excludes the source and incompatible stages and uses full
 precision plus stable IDs for ordering. It is lexical browsing, not a care
 pathway or a recommendation to undertake any treatment.
+`catalog-audit` needs no model and prepares a structural human-review
+inventory: per-resource hashes/token/question counts, shared-question
+provenance and identical token-document groups. Passing structural checks
+does not approve the content; the output explicitly records that this
+demonstration catalog has not undergone clinical review.
 
 `python -m maternity_copilot inspect` validates a fitted artifact and reports
 per-document sparsity/norms, a byte-level artifact hash and a canonical
