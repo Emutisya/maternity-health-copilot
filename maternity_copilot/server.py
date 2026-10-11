@@ -19,6 +19,16 @@ def unique_fields(pairs):
 
 def make_server(model, port=8765):
     class Handler(BaseHTTPRequestHandler):
+        def setup(self):
+            super().setup()
+            self.connection.settimeout(5)
+
+        def handle_one_request(self):
+            try:
+                super().handle_one_request()
+            except ConnectionError:
+                self.close_connection = True
+
         def log_message(self, *args):
             pass
 

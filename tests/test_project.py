@@ -1,4 +1,7 @@
 import copy
+from contextlib import redirect_stderr
+from http.client import RemoteDisconnected
+import io
 import itertools
 from http.client import HTTPConnection
 import json
@@ -230,6 +233,20 @@ class ProjectTests(unittest.TestCase):
             self.assertEqual(json.loads(response.read())["notice"], BANNER)
         finally:
             connection.close()
+        with urlopen(self.base + "/api/health", timeout=5) as response:
+            self.assertEqual(response.status, 200)
+
+    def test_client_disconnect_does_not_log_a_server_failure(self):
+        logs = io.StringIO()
+        connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+        try:
+            with redirect_stderr(logs), patch.object(self.server.RequestHandlerClass, "send", side_effect=ConnectionResetError("client closed")):
+                connection.request("GET", "/api/health")
+                with self.assertRaises(RemoteDisconnected):
+                    connection.getresponse()
+        finally:
+            connection.close()
+        self.assertEqual(logs.getvalue(), "")
         with urlopen(self.base + "/api/health", timeout=5) as response:
             self.assertEqual(response.status, 200)
 
