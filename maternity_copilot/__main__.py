@@ -5,7 +5,7 @@ from pathlib import Path
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
-from .audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep
+from .audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, related_resources, sensitivity, sweep, vocabulary_audit
 
 
 def main():
@@ -16,6 +16,8 @@ def main():
     commands.add_parser("inspect")
     commands.add_parser("coverage")
     commands.add_parser("catalog-audit")
+    vocabulary = commands.add_parser("vocabulary")
+    vocabulary.add_argument("--selection-only", action="store_true")
     resource_comparison = commands.add_parser("compare-resources")
     resource_comparison.add_argument("--stage", choices=OPTIONS["stage"], required=True)
     resource_comparison.add_argument("--resource", action="append", required=True)
@@ -134,6 +136,8 @@ def main():
             print(json.dumps(related_resources(model, args.stage, args.resource, args.limit), indent=2))
         elif args.command == "evaluate-baselines":
             print(json.dumps(evaluate_baselines(model, args.split, args.k), indent=2))
+        elif args.command == "vocabulary":
+            print(json.dumps(vocabulary_audit(model, args.selection_only), indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":

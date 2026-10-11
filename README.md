@@ -164,6 +164,10 @@ inventory: per-resource hashes/token/question counts, shared-question
 provenance and identical token-document groups. Passing structural checks
 does not approve the content; the output explicitly records that this
 demonstration catalog has not undergone clinical review.
+`vocabulary --selection-only` audits bounded-selection token coverage in the
+fitted vocabulary, with smoothed IDF, document frequencies and supporting
+resource IDs. Without that flag it inventories all learned catalog terms.
+Missing tokens are explicit; lexical coverage is not clinical knowledge.
 
 `python -m maternity_copilot inspect` validates a fitted artifact and reports
 per-document sparsity/norms, a byte-level artifact hash and a canonical

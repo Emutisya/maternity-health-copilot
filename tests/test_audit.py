@@ -2,6 +2,7 @@ import copy
 import hashlib
 import json
 import io
+import math
 import shutil
 import subprocess
 import sys
@@ -11,11 +12,19 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep
+from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep, vocabulary_audit
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_vocabulary_reconciles_smoothed_idf_and_selection_coverage(self):
+        report = vocabulary_audit(fitted_model(catalog()), selection_only=True)
+        self.assertEqual(report["missing_selection_terms"], [])
+        for term in report["terms"]:
+            self.assertTrue(term["used_in_selections"])
+            self.assertEqual(term["document_frequency"], len(term["resource_ids"]))
+            self.assertEqual(term["idf"], math.log(13 / (1 + term["document_frequency"])) + 1)
+
     def test_catalog_review_audit_retains_duplicate_question_provenance(self):
         rows = copy.deepcopy(catalog())
         rows[1]["questions"][0] = rows[0]["questions"][0]

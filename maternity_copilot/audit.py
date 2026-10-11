@@ -94,6 +94,24 @@ def catalog_audit():
             "meaning": "Structural review workload and lexical duplication only, not content approval."}
 
 
+def vocabulary_audit(model, selection_only=False):
+    if type(selection_only) is not bool:
+        raise ValueError("Selection-only must be a boolean inspection option.")
+    rows = model_catalog(model)
+    selection_terms = set(tokens(" ".join(value for values in OPTIONS.values() for value in values)))
+    document_terms = {row["id"]: set(tokens(document(row))) for row in rows}
+    terms = selection_terms if selection_only else set(model["idf"])
+    records = []
+    for term in sorted(terms):
+        documents = sorted(identifier for identifier, words in document_terms.items() if term in words)
+        records.append({"term": term, "idf": model["idf"].get(term),
+                        "document_frequency": len(documents), "resource_ids": documents,
+                        "used_in_selections": term in selection_terms})
+    return {"notice": BANNER, "synthetic_catalog": True, "catalog_sha256": fingerprint(rows),
+            "terms": records, "missing_selection_terms": sorted(selection_terms - set(model["idf"])),
+            "meaning": "Learned lexical coverage, not clinical knowledge or terminology validation."}
+
+
 def inspect_model(path):
     model, artifact_sha256 = load_model_snapshot(path)
     documents = [{"id": identifier, "nonzero_terms": len(weights),
