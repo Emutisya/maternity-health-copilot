@@ -138,6 +138,23 @@ def sensitivity(model, request, field):
             "meaning": "One-selection lexical sensitivity; positive shifts mean earlier rank, not better care."}
 
 
+def grouped_evaluation(model, split="held_out", k=3, by="topic"):
+    if by not in OPTIONS:
+        raise ValueError("Group evaluation by a documented bounded selection only.")
+    report = evaluate(model, split, k)
+    groups = []
+    fields = {"mrr_at_k": "reciprocal_rank_at_k", "map_at_k": "average_precision_at_k"}
+    for value in OPTIONS[by]:
+        cases = [case for case in report["cases"] if case["request"][by] == value]
+        groups.append({"value": value, "queries": len(cases),
+                       "metrics": {key: sum(case[fields.get(key, key)] for case in cases) / len(cases)
+                                   if cases else None for key in METRICS}})
+    return {"notice": BANNER, "synthetic_catalog": True,
+            "source_report_sha256": report["report_sha256"], "split": split, "k": k,
+            "group_by": by, "groups": groups,
+            "meaning": "Authored selection groups, not patient subgroups, fairness or population evidence."}
+
+
 def read_report(path):
     report = read_json(path)
     if not isinstance(report, dict):

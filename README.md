@@ -248,6 +248,10 @@ atomically stores bounded selectors and a catalog/hash manifest, not question
 text or personal notes. `plan-read --input models\questions.json` reconstructs
 the authored questions after strict integrity/schema checks. Catalog drift
 requires a fresh human review and selection; hashes are not signatures.
+`evaluate-groups --by topic --split held_out --k 3` reports macro metrics and
+case counts for each bounded selection value. Empty groups use null, not zero.
+Weighted group metrics reconcile with the original report. These are tiny
+authored selection groups, not patient subgroups or a fairness assessment.
 Unlike the dashboard's ephemeral state, these explicit files persist until
 you delete them. Never put personal data in them.
 `plan ... --text` and `plan-read ... --text` print a readable numbered

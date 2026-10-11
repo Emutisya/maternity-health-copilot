@@ -11,11 +11,22 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
-from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sensitivity, sweep
+from maternity_copilot.audit import browse, compare_reports, coverage, explain, grouped_evaluation, inspect_model, read_report, sensitivity, sweep
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_grouped_evaluation_weights_reconcile_with_macro_report(self):
+        model = fitted_model(catalog())
+        report = evaluate(model, k=1)
+        for by in ("stage", "topic", "format", "focus"):
+            groups = grouped_evaluation(model, k=1, by=by)["groups"]
+            self.assertEqual(sum(group["queries"] for group in groups), report["queries"])
+            for key in ("recall_at_k", "ndcg_at_k", "mrr_at_k"):
+                weighted = sum(group["metrics"][key] * group["queries"]
+                               for group in groups if group["queries"]) / report["queries"]
+                self.assertAlmostEqual(weighted, report[key])
+
     def test_artifact_inspection_hashes_the_same_bytes_it_validates(self):
         rows = catalog()
         raw = json.dumps(fitted_model(rows)).encode()

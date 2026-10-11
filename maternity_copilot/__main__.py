@@ -5,7 +5,7 @@ from pathlib import Path
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
-from .audit import browse, compare_reports, coverage, explain, inspect_model, sensitivity, sweep
+from .audit import browse, compare_reports, coverage, explain, grouped_evaluation, inspect_model, sensitivity, sweep
 
 
 def main():
@@ -27,6 +27,10 @@ def main():
     restoring.add_argument("--text", action="store_true")
     sweeping = commands.add_parser("sweep")
     sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
+    grouping = commands.add_parser("evaluate-groups")
+    grouping.add_argument("--by", choices=list(OPTIONS), default="topic")
+    grouping.add_argument("--split", choices=["development", "held_out"], default="held_out")
+    grouping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     comparing = commands.add_parser("compare")
     comparing.add_argument("--before", required=True)
     comparing.add_argument("--after", required=True)
@@ -103,6 +107,8 @@ def main():
             print(json.dumps(report, indent=2))
         elif args.command == "sweep":
             print(json.dumps(sweep(model, args.k), indent=2))
+        elif args.command == "evaluate-groups":
+            print(json.dumps(grouped_evaluation(model, args.split, args.k, args.by), indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":
