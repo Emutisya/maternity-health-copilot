@@ -124,6 +124,8 @@ def train(destination):
 
 def write_json(destination, payload):
     path = Path(destination)
+    if path.suffix.lower() != ".json" or path.resolve().is_relative_to(Path(__file__).parent.resolve()):
+        raise ValueError("Artifact outputs must be .json files outside the packaged source/data directory.")
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
     try:

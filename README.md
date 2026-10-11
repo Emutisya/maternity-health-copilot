@@ -74,6 +74,10 @@ python -m maternity_copilot serve
 ```
 
 Open **http://127.0.0.1:8765**. Stop with Ctrl+C. Use `serve --port 8766` if that port is occupied, and open the corresponding loopback URL. Models are regenerated locally and ignored by Git. Global `--model` belongs **before** the subcommand:
+All artifact writers require `.json` destinations outside the packaged
+`maternity_copilot\` source/data tree, after resolving symlinks. Training cannot
+accidentally replace the catalog or source, and JSON exports cannot overwrite
+README, Python or packaging files. Global `--model` belongs **before** the subcommand:
 
 ```powershell
 python -m maternity_copilot --model models\demo.json train

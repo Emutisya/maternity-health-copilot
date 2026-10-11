@@ -11,12 +11,23 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
+from maternity_copilot.core import BANNER, DATA, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
 from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, related_resources, sensitivity, sweep, vocabulary_audit
 from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_artifact_writes_cannot_destroy_authored_source_or_catalog(self):
+        original = (DATA / "catalog.json").read_bytes()
+        with patch("maternity_copilot.core.os.replace") as replace:
+            for path in (DATA / "catalog.json", DATA.parent / "artifact.json", Path("README.md")):
+                with self.assertRaisesRegex(ValueError, "outside the packaged"):
+                    write_json(path, {})
+            with self.assertRaises(ValueError):
+                train(DATA / "catalog.json")
+        replace.assert_not_called()
+        self.assertEqual((DATA / "catalog.json").read_bytes(), original)
+
     def test_vocabulary_reconciles_smoothed_idf_and_selection_coverage(self):
         report = vocabulary_audit(fitted_model(catalog()), selection_only=True)
         self.assertEqual(report["missing_selection_terms"], [])
