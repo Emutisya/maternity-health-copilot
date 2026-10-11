@@ -3,7 +3,6 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from .core import BANNER, OPTIONS, ModelError, model_catalog, retrieve
 
@@ -57,7 +56,11 @@ def make_server(model, port=8765):
         def do_GET(self):
             if not self.allowed():
                 return
-            path = urlsplit(self.path).path
+            target = self.requestline.split()[1]
+            if not target.startswith("/") or target.startswith("//") or "#" in target:
+                self.send(400, {"error": "Use an origin-form loopback path without a fragment.", "notice": BANNER})
+                return
+            path = self.path.partition("?")[0]
             if path == "/":
                 self.send(200, (Path(__file__).parent / "dashboard.html").read_bytes(),
                           "text/html; charset=utf-8")

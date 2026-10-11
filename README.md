@@ -135,6 +135,8 @@ Responses include the notice, prototype/synthetic flags, score meaning and catal
 The server binds only to `127.0.0.1`, validates Host and browser Origin, provides no cross-origin access, disables caching and request logs, and never writes requests to disk. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 Duplicate Host, Origin and Content-Type headers are rejected rather than
 interpreting only the first value. JSON media-type matching is case-insensitive. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
+GET targets must be origin-form paths; absolute URLs, network-path targets and
+fragments return bounded JSON errors rather than aliasing the dashboard. Requests still pass through transient process memory. Printouts are the user's copies; browser/OS printing may save them. This lightweight development server is **not** production infrastructure or a privacy/compliance guarantee. Do not expose it publicly, use real health data or trust models from other people.
 
 ## Model card
 

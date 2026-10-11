@@ -299,6 +299,19 @@ class ProjectTests(unittest.TestCase):
         with self.post(body, {"Content-Type": "Application/JSON; charset=utf-8"}) as response:
             self.assertEqual(response.status, 200)
 
+    def test_malformed_get_targets_do_not_crash_or_alias_dashboard(self):
+        for target in ("http://[", "//[", "http://example.invalid/", "/#fragment"):
+            connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+            try:
+                connection.request("GET", target, headers={"Host": f"127.0.0.1:{self.server.server_port}"})
+                response = connection.getresponse()
+                self.assertEqual(response.status, 400)
+                self.assertEqual(json.loads(response.read())["notice"], BANNER)
+            finally:
+                connection.close()
+        with urlopen(self.base + "/api/health", timeout=5) as response:
+            self.assertEqual(response.status, 200)
+
     def test_stalled_request_returns_timeout_without_breaking_server(self):
         connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=8)
         try:
