@@ -109,6 +109,10 @@ all matching card checkboxes and moving focus to the next retained control.
 Clear question list only preserves the current matches/preferences, unlike
 Reset demo. A live count announces list changes. Browser scenario `planner`
 verifies removal, focus, checkbox synchronization and clearing without search.
+Move up/down buttons reorder fixed planner questions, preserving selected
+checkboxes and focus on the moved item; unavailable boundary moves are
+disabled. This is the demonstrator's conversation order, not a clinical
+priority. Browser scenario `ordering` verifies permutations and focus.
 
 ### Run alongside the other projects
 

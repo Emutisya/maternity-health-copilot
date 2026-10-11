@@ -124,6 +124,17 @@ async function main() {
       assert.equal(await evaluate("document.querySelectorAll('#cards input:checked').length"), 0);
       assert.equal(await evaluate("document.getElementById('print').disabled"), true);
       assert.equal(await evaluate("document.activeElement.id"), "planner-title");
+    } else if (scenario === "ordering") {
+      await evaluate("document.getElementById('match').click()");
+      await wait("document.querySelectorAll('#cards article').length === 3");
+      await evaluate("Array.from(document.querySelectorAll('#cards input')).slice(0, 3).forEach(input => input.click())");
+      const original = await evaluate("Array.from(selected)");
+      await evaluate("document.querySelectorAll('#question-list li')[2].querySelector('[data-action=\"up\"]').click()");
+      assert.deepEqual(await evaluate("Array.from(selected)"), [original[0], original[2], original[1]]);
+      assert.equal(await evaluate("document.activeElement.dataset.action"), "up");
+      assert.equal(await evaluate("document.querySelector('#question-list li [data-action=\"up\"]').disabled"), true);
+      assert.equal(await evaluate("document.querySelectorAll('#question-list li')[2].querySelector('[data-action=\"down\"]').disabled"), true);
+      assert.equal(await evaluate("document.querySelectorAll('#cards input:checked').length"), 3);
     } else {
       throw new Error("Unknown browser scenario");
     }

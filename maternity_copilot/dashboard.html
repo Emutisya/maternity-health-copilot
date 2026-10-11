@@ -197,12 +197,23 @@ function element(tag, text, className) {
 function syncChecks() {
   cards.querySelectorAll("input[data-question]").forEach(input => { input.checked = selected.has(input.dataset.question); });
 }
-function updateQuestions(focusIndex = null) {
+function moveQuestion(question, delta) {
+  const ordered = Array.from(selected);
+  const index = ordered.indexOf(question);
+  if (index < 0 || index + delta < 0 || index + delta >= ordered.length) return;
+  ordered.splice(index, 1);
+  ordered.splice(index + delta, 0, question);
+  selected.clear();
+  ordered.forEach(item => selected.add(item));
+  updateQuestions(index + delta, delta < 0 ? "up" : "down");
+}
+function updateQuestions(focusIndex = null, focusAction = "remove") {
   const list = document.getElementById("question-list");
   list.replaceChildren(...Array.from(selected, (question, index) => {
     const item = element("li");
     const remove = element("button", "Remove", "secondary no-print");
     remove.type = "button";
+    remove.dataset.action = "remove";
     remove.setAttribute("aria-label", `Remove fixed question: ${question}`);
     remove.addEventListener("click", () => {
       selected.delete(question);
@@ -210,6 +221,15 @@ function updateQuestions(focusIndex = null) {
       updateQuestions(Math.min(index, selected.size - 1));
     });
     item.append(element("span", question), remove);
+    for (const [action, delta, text] of [["up", -1, "Move up"], ["down", 1, "Move down"]]) {
+      const move = element("button", text, "secondary no-print");
+      move.type = "button";
+      move.dataset.action = action;
+      move.disabled = index + delta < 0 || index + delta >= selected.size;
+      move.setAttribute("aria-label", `${text} fixed question: ${question}`);
+      move.addEventListener("click", () => moveQuestion(question, delta));
+      item.append(move);
+    }
     return item;
   }));
   document.getElementById("empty-list").hidden = selected.size > 0;
@@ -217,7 +237,9 @@ function updateQuestions(focusIndex = null) {
   document.getElementById("clear-questions").disabled = selected.size === 0;
   document.getElementById("planner-count").textContent = `${selected.size} fixed question${selected.size === 1 ? "" : "s"} selected.`;
   if (focusIndex !== null) {
-    const next = list.querySelectorAll("button")[focusIndex];
+    const item = list.children[focusIndex];
+    const preferred = item?.querySelector(`[data-action="${focusAction}"]`);
+    const next = preferred && !preferred.disabled ? preferred : item?.querySelector('[data-action="remove"]');
     (next || document.getElementById("planner-title")).focus();
   }
 }
