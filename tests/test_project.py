@@ -330,6 +330,27 @@ class ProjectTests(unittest.TestCase):
             finally:
                 connection.close()
 
+    def test_http_catalog_browsing_is_bounded_read_only_and_handles_catalog_failures(self):
+        def browse_call(payload):
+            return urlopen(Request(self.base + "/api/catalog", data=json.dumps(payload).encode(),
+                                   headers={"Content-Type": "application/json"}), timeout=5)
+        with browse_call({"stage": "pregnancy", "topic": "access", "limit": 1}) as response:
+            page = json.load(response)
+        self.assertEqual(page["total"], 2)
+        self.assertEqual(page["next_offset"], 1)
+        self.assertNotIn("retrieval_score", page["resources"][0])
+        for payload in ({"name": "not accepted"}, {"offset": True}, {"limit": 13}):
+            with self.assertRaises(HTTPError) as error:
+                browse_call(payload)
+            self.assertEqual(error.exception.code, 400)
+            error.exception.close()
+        with patch("maternity_copilot.audit.catalog", side_effect=FileNotFoundError):
+            with self.assertRaises(HTTPError) as error:
+                browse_call({})
+            self.assertEqual(error.exception.code, 503)
+            self.assertEqual(json.load(error.exception)["notice"], BANNER)
+            error.exception.close()
+
     def test_stalled_request_returns_timeout_without_breaking_server(self):
         connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=8)
         try:

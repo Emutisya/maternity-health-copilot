@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .core import BANNER, OPTIONS, ModelError, model_catalog, retrieve
+from .audit import browse_request
 
 
 def unique_fields(pairs):
@@ -93,7 +94,7 @@ def make_server(model, port=8765):
         def do_POST(self):
             if not self.allowed():
                 return
-            if self.path != "/api/resources":
+            if self.path not in ("/api/resources", "/api/catalog"):
                 self.send(404, {"error": "Not found.", "notice": BANNER})
                 return
             if (len(self.headers.get_all("Content-Type", [])) != 1
@@ -115,7 +116,7 @@ def make_server(model, port=8765):
                 if len(raw) != size:
                     raise ValueError("Incomplete request body.")
                 payload = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_fields)
-                result = retrieve(model, payload)
+                result = browse_request(payload) if self.path == "/api/catalog" else retrieve(model, payload)
             except ModelError as error:
                 self.send(503, {"error": str(error), "notice": BANNER})
                 return

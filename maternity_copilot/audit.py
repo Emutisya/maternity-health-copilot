@@ -4,7 +4,7 @@ import itertools
 import math
 import re
 
-from .core import BANNER, OPTIONS, _evaluate_snapshot, _rank_rows, catalog, document, evaluate, fingerprint, fitted_model, load_benchmark, load_model_snapshot, model_catalog, rank_resources, read_json, tokens, validate, vector
+from .core import BANNER, OPTIONS, ModelError, _evaluate_snapshot, _rank_rows, catalog, document, evaluate, fingerprint, fitted_model, load_benchmark, load_model_snapshot, model_catalog, rank_resources, read_json, tokens, validate, vector
 
 
 def browse(filters=None, offset=0, limit=6):
@@ -14,7 +14,10 @@ def browse(filters=None, offset=0, limit=6):
             or type(offset) is not int or offset < 0
             or type(limit) is not int or not 1 <= limit <= 12):
         raise ValueError("Browse uses bounded filters, a nonnegative offset and limit 1–12.")
-    rows = catalog()
+    try:
+        rows = catalog()
+    except (OSError, ValueError, RecursionError) as error:
+        raise ModelError("Educational browsing is unavailable. Restore the authored catalog and retry.") from error
     selected = sorted(
         (row for row in rows if all(
             value in row["stages"] if key == "stage" else row[key] == value
@@ -25,6 +28,13 @@ def browse(filters=None, offset=0, limit=6):
             "resources": selected[offset:offset + limit],
             "next_offset": offset + limit if offset + limit < len(selected) else None,
             "ordering": "Resource ID, not medical relevance or ranking."}
+
+
+def browse_request(request):
+    if not isinstance(request, dict) or set(request) - (set(OPTIONS) | {"offset", "limit"}):
+        raise ValueError("Browse accepts bounded filters, offset and limit only; no free text.")
+    return browse({key: request[key] for key in OPTIONS if key in request},
+                  request.get("offset", 0), request.get("limit", 6))
 
 
 def compare_resources(stage, identifiers):

@@ -117,6 +117,12 @@ rather than stopping an unrelated process.
 
 `GET /api/health` checks readiness; `GET /api/options` returns the bounded schema. `GET /` serves only the dashboard.
 Readiness checks the live catalog fingerprint, returning 503 after catalog drift instead of advertising a stale model as ready; ready responses identify the catalog and resource count.
+`POST /api/catalog` is read-only exact-filter browsing, not inference. Its
+JSON object accepts optional stage/topic/format/focus, `offset` (nonnegative
+integer) and `limit` (1–12, default 6). It returns ID-ordered fixed content,
+total and next offset, rejecting extra fields/personal data and returning 503
+if the authored catalog cannot be read. It shares inference's loopback,
+media-type, framing, UTF-8, no-store and request-size controls.
 
 `POST /api/resources` requires `Content-Type: application/json`:
 
