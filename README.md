@@ -9,7 +9,6 @@ starters and a printable question list for discussion with a qualified
 healthcare professional.
 
 [![CI](https://github.com/Emutisya/maternity-health-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/Emutisya/maternity-health-copilot/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > Not medical advice. For symptoms or concerns, contact a qualified healthcare professional. If you think there is an emergency, contact local emergency services.
 
@@ -179,7 +178,6 @@ maternity_copilot\data\catalog.json
 maternity_copilot\data\benchmark.json
 tests\test_project.py              Model, safety-boundary and actual HTTP tests
 pyproject.toml                    Optional packaging; no runtime dependencies
-LICENSE                           MIT
 ```
 
 CI exercises persistence, stale-model rejection, learned preference relevance, split uniqueness, independently recomputed metrics, every bounded input combination, invalid/symptom inputs and real HTTP inference with origin/size controls. Tests create isolated files under ignored `models\` and remove them afterward. Runtime model artifacts are local only.
