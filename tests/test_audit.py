@@ -17,6 +17,29 @@ from maternity_copilot.planning import make_plan, read_plan, render_plan, save_p
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_overflowing_json_literals_and_material_metric_drift_are_not_accepted(self):
+        for text in ('{"x":1e999}', '{"x":-1e999}'):
+            with self.assertRaises(ValueError):
+                decode_json(text)
+        directory = Path("models") / ("numeric-" + uuid.uuid4().hex)
+        path = directory / "report.json"
+        try:
+            report = evaluate(fitted_model(catalog()))
+            report["cases"][0]["ndcg_at_k"] -= 1e-14
+            report["ndcg_at_k"] -= 1e-14 / report["queries"]
+            report["report_sha256"] = fingerprint({key: value for key, value in report.items()
+                                                  if key != "report_sha256"})
+            write_json(path, report)
+            self.assertEqual(read_report(path), report)
+            report["cases"][0]["ndcg_at_k"] -= .001
+            report["report_sha256"] = fingerprint({key: value for key, value in report.items()
+                                                  if key != "report_sha256"})
+            write_json(path, report)
+            with self.assertRaisesRegex(ValueError, "metrics"):
+                read_report(path)
+        finally:
+            shutil.rmtree(directory)
+
     def test_artifact_writes_cannot_destroy_authored_source_or_catalog(self):
         original = (DATA / "catalog.json").read_bytes()
         with patch("maternity_copilot.core.os.replace") as replace:

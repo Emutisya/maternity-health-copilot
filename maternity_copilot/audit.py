@@ -345,7 +345,7 @@ def read_report(path):
                                         for i, hit in enumerate(hits)) / min(report["k"], len(gold)),
         }
         for key, value in values.items():
-            if type(case[key]) not in (int, float) or case[key] != value:
+            if type(case[key]) not in (int, float) or not math.isclose(case[key], value, rel_tol=0, abs_tol=1e-12):
                 raise ValueError("Evaluation case metrics do not reconcile with rankings.")
         if (type(case["eligible_count"]) is not int or case["eligible_count"] != len(eligible)
                 or type(case["recall_ceiling_at_k"]) not in (int, float)
@@ -364,7 +364,7 @@ def read_report(path):
     fields = {"mrr_at_k": "reciprocal_rank_at_k", "map_at_k": "average_precision_at_k"}
     for key in METRICS:
         value = sum(case[fields.get(key, key)] for case in report["cases"]) / report["queries"]
-        if type(report[key]) not in (int, float) or report[key] != value:
+        if type(report[key]) not in (int, float) or not math.isclose(report[key], value, rel_tol=0, abs_tol=1e-12):
             raise ValueError("Evaluation aggregate metrics do not reconcile.")
     return report
 

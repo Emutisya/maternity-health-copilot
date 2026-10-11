@@ -242,6 +242,10 @@ deltas and changed cases. Both reports must use the current synthetic catalog
 and benchmark, the same split and k. It allows different model hashes, but does
 not load those models or establish statistical/clinical significance. A report
 hash is an integrity check, not an author signature.
+Metric reconciliation allows at most `1e-12` absolute arithmetic difference
+for cross-platform logarithm roundoff; report integrity hashes remain exact,
+and ranking still uses full precision. Overflowing JSON exponents such as
+`1e999` are rejected as nonfinite, not silently accepted as infinity.
 
 `coverage` needs no model: it audits the 48 possible bounded selections against
 the 12 authored benchmark cases, lists unrepresented combinations, counts

@@ -37,7 +37,14 @@ def decode_json(text):
     def invalid_constant(value):
         raise ValueError("Nonfinite numbers in local JSON are not accepted.")
 
-    return json.loads(text, object_pairs_hook=unique, parse_constant=invalid_constant)
+    def finite_float(value):
+        number = float(value)
+        if not math.isfinite(number):
+            invalid_constant(value)
+        return number
+
+    return json.loads(text, object_pairs_hook=unique, parse_constant=invalid_constant,
+                      parse_float=finite_float)
 
 
 def read_bytes(path, max_bytes=2_000_000):
