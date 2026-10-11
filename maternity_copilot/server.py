@@ -45,11 +45,11 @@ def make_server(model, port=8765):
 
         def allowed(self):
             expected = f"127.0.0.1:{self.server.server_port}"
-            if self.headers.get("Host") != expected:
+            if len(self.headers.get_all("Host", [])) != 1 or self.headers.get("Host") != expected:
                 self.send(403, {"error": "Use the documented loopback URL.", "notice": BANNER})
                 return False
             origin = self.headers.get("Origin")
-            if origin is not None and origin != f"http://{expected}":
+            if len(self.headers.get_all("Origin", [])) > 1 or (origin is not None and origin != f"http://{expected}"):
                 self.send(403, {"error": "Cross-origin requests are not accepted.", "notice": BANNER})
                 return False
             return True
@@ -81,7 +81,8 @@ def make_server(model, port=8765):
             if self.path != "/api/resources":
                 self.send(404, {"error": "Not found.", "notice": BANNER})
                 return
-            if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
+            if (len(self.headers.get_all("Content-Type", [])) != 1
+                    or self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json"):
                 self.send(415, {"error": "Use application/json.", "notice": BANNER})
                 return
             try:

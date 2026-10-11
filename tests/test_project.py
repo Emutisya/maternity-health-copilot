@@ -276,6 +276,29 @@ class ProjectTests(unittest.TestCase):
         with urlopen(self.base + "/api/health", timeout=5) as response:
             self.assertEqual(json.load(response)["status"], "ready")
 
+    def test_duplicate_routing_and_media_headers_are_rejected(self):
+        body = json.dumps(REQUEST).encode()
+        expected = f"127.0.0.1:{self.server.server_port}"
+        for duplicated, value, status in (("Host", expected, 403),
+                                           ("Origin", f"http://{expected}", 403),
+                                           ("Content-Type", "application/json", 415)):
+            connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
+            try:
+                connection.putrequest("POST", "/api/resources", skip_host=True)
+                connection.putheader("Host", expected)
+                connection.putheader("Origin", f"http://{expected}")
+                connection.putheader("Content-Type", "application/json")
+                connection.putheader(duplicated, value)
+                connection.putheader("Content-Length", str(len(body)))
+                connection.endheaders(body)
+                response = connection.getresponse()
+                self.assertEqual(response.status, status)
+                self.assertEqual(json.loads(response.read())["notice"], BANNER)
+            finally:
+                connection.close()
+        with self.post(body, {"Content-Type": "Application/JSON; charset=utf-8"}) as response:
+            self.assertEqual(response.status, 200)
+
     def test_stalled_request_returns_timeout_without_breaking_server(self):
         connection = HTTPConnection("127.0.0.1", self.server.server_port, timeout=8)
         try:
