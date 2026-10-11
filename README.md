@@ -312,6 +312,10 @@ validated synthetic selector files for the same stage, deduplicating picks
 and preserving first occurrence. The six-resource/twelve-pick bounds still
 apply. Optional `--output` saves a selector file; `--text` prints the list.
 Merging does not remove the human-review requirement.
+`plan-diff --before models\a.json --after models\b.json` reviews two validated
+selector files, separating added/removed fixed picks, retained-order changes
+and stage changes. It does not interpret changes as clinical progress, care
+needs or a real appointment history.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 

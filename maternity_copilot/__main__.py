@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core import BANNER, DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
-from .planning import make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
+from .planning import compare_plans, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 from .audit import METRICS, browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
 
 
@@ -39,6 +39,9 @@ def main():
     merging.add_argument("--input", action="append", required=True)
     merging.add_argument("--output")
     merging.add_argument("--text", action="store_true")
+    plan_comparison = commands.add_parser("plan-diff")
+    plan_comparison.add_argument("--before", required=True)
+    plan_comparison.add_argument("--after", required=True)
     sweeping = commands.add_parser("sweep")
     sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     grouping = commands.add_parser("evaluate-groups")
@@ -77,6 +80,9 @@ def main():
     if args.command == "serve" and not 0 <= args.port <= 65535:
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
+        if args.command == "plan-diff":
+            print(json.dumps(compare_plans(read_plan(args.before), read_plan(args.after)), indent=2))
+            return
         if args.command == "plan-merge":
             if not 2 <= len(args.input) <= 4:
                 raise ValueError("Merge two to four synthetic selection files.")

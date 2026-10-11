@@ -13,10 +13,25 @@ from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, DATA, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, read_json, retrieve, train, write_json
 from maternity_copilot.audit import browse, catalog_audit, compare_reports, compare_resources, coverage, cutoff_curve, evaluate_baselines, explain, grouped_evaluation, inspect_model, read_report, regression_gate, related_resources, sensitivity, sweep, vocabulary_audit
-from maternity_copilot.planning import make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
+from maternity_copilot.planning import compare_plans, make_plan, merge_plans, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_plan_diff_distinguishes_reordering_from_membership_and_stage_changes(self):
+        picks = [{"resource_id": "access-guide", "question_number": 1},
+                 {"resource_id": "support-guide", "question_number": 2}]
+        first = select_questions("pregnancy", picks)
+        reversed_plan = select_questions("pregnancy", list(reversed(picks)))
+        difference = compare_plans(first, reversed_plan)
+        self.assertTrue(difference["retained_order_changed"])
+        self.assertEqual(difference["added"], [])
+        self.assertEqual(difference["removed"], [])
+        stage_difference = compare_plans(first, select_questions("postpartum", picks))
+        self.assertTrue(stage_difference["stage_changed"])
+        self.assertFalse(stage_difference["retained_order_changed"])
+        removed = compare_plans(first, select_questions("pregnancy", picks[:1]))
+        self.assertEqual(removed["removed"], picks[1:])
+
     def test_merging_question_lists_deduplicates_and_rejects_stage_changes(self):
         first = make_plan("pregnancy", ["access-guide"])
         second = make_plan("pregnancy", ["access-guide", "support-guide"])

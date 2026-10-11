@@ -119,3 +119,23 @@ def merge_plans(plans):
                     selections.append(origin)
                     seen.add(signature)
     return select_questions(checked[0]["stage"], selections)
+
+
+def compare_plans(before, after):
+    before, after = checked_plan(before), checked_plan(after)
+    old = [(origin["resource_id"], origin["question_number"])
+           for question in before["questions"] for origin in question["sources"]]
+    new = [(origin["resource_id"], origin["question_number"])
+           for question in after["questions"] for origin in question["sources"]]
+    def picks(signatures):
+        return [{"resource_id": identifier, "question_number": number} for identifier, number in signatures]
+    shared = set(old) & set(new)
+    return {"notice": BANNER, "synthetic_catalog": True, "human_review_required": True,
+            "catalog_sha256": before["catalog_sha256"],
+            "before_stage": before["stage"], "after_stage": after["stage"],
+            "stage_changed": before["stage"] != after["stage"],
+            "added": picks(item for item in new if item not in set(old)),
+            "removed": picks(item for item in old if item not in set(new)),
+            "retained_order_changed": [item for item in old if item in shared] !=
+                                      [item for item in new if item in shared],
+            "meaning": "Fixed selector changes only, not a change in care needs or a clinical record."}
