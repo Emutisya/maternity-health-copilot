@@ -125,6 +125,18 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
 <body>
 <a class="skip-link no-print" href="#demo-title">Skip to demo selections</a>
 <div class="banner" role="note"><strong>Not medical advice.</strong> For symptoms or concerns, contact a qualified healthcare professional. If you think there is an emergency, contact local emergency services.</div>
+<noscript>
+  <style>.layout, .section-links { display: none; } #no-script-help { margin: 24px; } #no-script-help pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: Consolas, "Courier New", Courier, monospace; }</style>
+  <section id="no-script-help" class="panel" aria-labelledby="no-script-title">
+    <h2 id="no-script-title">JavaScript is disabled: this page is read-only</h2>
+    <p>Interactive retrieval, question selection and printing controls are unavailable. No request or personal information is sent. Use the standard-library CLI from the project directory, or enable JavaScript for the documented local Python dashboard.</p>
+    <pre>python -m maternity_copilot browse --stage pregnancy --topic access
+python -m maternity_copilot train
+python -m maternity_copilot match --stage pregnancy --topic appointments --format guide --focus planning
+python -m maternity_copilot plan --stage pregnancy --resource access-guide --text</pre>
+    <p>Use only synthetic demonstration selections. Fixed discussion questions require human review and are not medical advice or an individualized care plan.</p>
+  </section>
+</noscript>
 <main>
   <div class="eyebrow">AI for Health / Education only</div>
   <h1>Maternity Health Copilot</h1>

@@ -8,9 +8,8 @@ const [base, port, scenario = "cancel"] = process.argv.slice(2);
 async function main() {
   assert.match(base, /^http:\/\/127\.0\.0\.1:\d+$/);
   assert.equal((await fetch(base + "/api/health")).status, 200);
-  const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-  const target = targets.find(item => item.type === "page");
-  assert.ok(target);
+  const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, {method: "PUT"})).json();
+  assert.equal(target.type, "page");
   const socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => {
     socket.addEventListener("open", resolve, {once: true});
@@ -49,9 +48,10 @@ async function main() {
   };
   try {
     await call("Network.enable");
+    await call("Emulation.setScriptExecutionDisabled", {value: scenario === "no-script"});
     const pageUrl = base + "/?browserCheck=" + Date.now();
     await call("Page.navigate", {url: pageUrl});
-    await wait(`location.href === ${JSON.stringify(pageUrl)} && document.readyState === 'complete' && typeof invalidate === 'function'`);
+    await wait(`location.href === ${JSON.stringify(pageUrl)} && document.readyState === 'complete'${scenario === "no-script" ? "" : " && typeof invalidate === 'function'"}`);
     if (scenario === "cancel") {
       await evaluate(`window.__realFetch = window.fetch;
         window.fetch = (...args) => new Promise(resolve => {
@@ -271,6 +271,14 @@ async function main() {
         await call("Browser.setDownloadBehavior", {behavior: "default"});
         fs.rmSync(folder, {recursive: true, force: true});
       }
+    } else if (scenario === "no-script") {
+      assert.match(await evaluate("document.getElementById('no-script-help').textContent"), /JavaScript is disabled.*read-only/);
+      assert.equal(await evaluate("getComputedStyle(document.querySelector('.layout')).display"), "none");
+      assert.equal(await evaluate("typeof invalidate"), "undefined");
+      assert.ok(urls.every(url => !url.includes("/api/")));
+      await call("Emulation.setDeviceMetricsOverride", {width: 375, height: 812, deviceScaleFactor: 1, mobile: true});
+      assert.equal(await evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true);
+      await call("Emulation.clearDeviceMetricsOverride");
     } else {
       throw new Error("Unknown browser scenario");
     }
@@ -278,7 +286,9 @@ async function main() {
     assert.equal(await evaluate("window.localStorage.length + window.sessionStorage.length"), 0);
     console.log(`PASS real Chromium ${scenario}; ${urls.length} loopback requests; no browser storage`);
   } finally {
+    await call("Emulation.setScriptExecutionDisabled", {value: false});
     socket.close();
+    await fetch(`http://127.0.0.1:${port}/json/close/${target.id}`);
   }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
