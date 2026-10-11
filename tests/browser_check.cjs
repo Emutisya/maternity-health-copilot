@@ -190,6 +190,21 @@ async function main() {
       await evaluate("document.getElementById('change-selections').click()");
       assert.equal(await evaluate("document.activeElement.id"), "stage");
       assert.equal(await evaluate("document.getElementById('print').disabled"), true);
+    } else if (scenario === "browse") {
+      await evaluate("document.getElementById('topic').value = 'access'; document.getElementById('limit').value = '1'; document.getElementById('browse').click()");
+      await wait("document.querySelectorAll('#cards article').length === 1 && !document.getElementById('catalog-pages').hidden");
+      const first = await evaluate("document.querySelector('#cards h3').textContent");
+      assert.match(await evaluate("document.querySelector('#cards .meta').textContent"), /no score/);
+      await evaluate("document.querySelector('#cards input').click(); document.getElementById('next-page').click()");
+      await wait("document.getElementById('next-page').disabled && document.querySelectorAll('#cards article').length === 1");
+      assert.notEqual(await evaluate("document.querySelector('#cards h3').textContent"), first);
+      assert.equal(await evaluate("selected.size"), 1);
+      await evaluate("document.querySelector('#cards input').click(); document.getElementById('previous-page').click()");
+      await wait("document.getElementById('previous-page').disabled && document.querySelectorAll('#cards article').length === 1");
+      assert.equal(await evaluate("document.querySelector('#cards h3').textContent"), first);
+      assert.equal(await evaluate("selected.size"), 2);
+      assert.equal(await evaluate("document.querySelector('#cards input').checked"), true);
+      assert.equal(await evaluate("document.querySelector('#question-list .question-source').textContent.split('question 1').length"), 2);
     } else {
       throw new Error("Unknown browser scenario");
     }

@@ -151,16 +151,18 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 32px; padding-top: 
         <label for="limit">Number of educational resources</label>
         <select id="limit"><option value="1">1 resource</option><option value="2">2 resources</option><option value="3" selected>3 resources</option><option value="4">4 resources</option><option value="5">5 resources</option><option value="6">6 resources</option></select>
         <button class="wide" id="match" type="submit">Find educational resources</button>
+        <button class="wide secondary" id="browse" type="button">Browse stage and topic (no ranking)</button>
         <button class="wide secondary" id="cancel" type="button" hidden>Cancel search (Escape)</button>
       </form>
       <div class="note">This is not symptom screening, diagnosis, triage or treatment. Nothing here assesses whether you are safe. Do not enter real health information.</div>
     </aside>
     <section aria-label="Educational resources and question planner">
-      <div class="results-header"><div><h2 id="results-title" tabindex="-1">02 / Explore resources</h2><small>Ranked by learned text similarity, not medical relevance.</small></div><span class="pill">12 synthetic resources</span></div>
+      <div class="results-header"><div><h2 id="results-title" tabindex="-1">02 / Explore resources</h2><small id="mode-description">Ranked by learned text similarity, not medical relevance.</small></div><span class="pill">12 synthetic resources</span></div>
       <p id="status" role="status" aria-live="polite">Choose a demo and find resources to begin.</p>
       <button id="retry" class="secondary no-print" type="button" hidden>Retry the same synthetic selections</button>
       <button id="change-selections" class="secondary no-print" type="button" hidden>Review synthetic selections</button>
       <div id="cards" aria-busy="false"><div class="empty">Your educational conversation starters will appear here. No information is sent outside the local Python backend.</div></div>
+      <nav id="catalog-pages" class="no-print" aria-label="Catalog pages" hidden><button id="previous-page" class="secondary" type="button">Previous catalog page</button> <button id="next-page" class="secondary" type="button">Next catalog page</button></nav>
       <section class="panel" aria-labelledby="planner-title">
         <h2 id="planner-title" tabindex="-1">03 / Appointment question list</h2>
         <p class="no-print">Select questions from the resource cards. This list exists only in this page's memory and is cleared on refresh. Printing creates a copy you control.</p>
@@ -190,6 +192,8 @@ const allowedSelections = {
 const selected = new Set();
 const questionSources = new Map();
 let matchedCatalog = null;
+let browsePage = null;
+let retryAction = {mode: "match", offset: 0};
 const status = document.getElementById("status");
 const cards = document.getElementById("cards");
 const presets = {
@@ -205,13 +209,17 @@ function element(tag, text, className) {
   if (className) node.className = className;
   return node;
 }
-function validResourceResponse(data, request) {
-  if (!data || data.prototype !== true || data.synthetic_catalog !== true ||
+function validResourceResponse(data, request, mode) {
+  if (!data || (mode === "match" && data.prototype !== true) || data.synthetic_catalog !== true ||
       data.notice !== document.querySelector(".banner").textContent ||
       !/^[0-9a-f]{64}$/.test(data.catalog_sha256) || !Array.isArray(data.resources) ||
       data.resources.length > request.limit) return false;
+  if (mode === "browse" && (!Number.isInteger(data.total) || data.total < data.resources.length ||
+      data.offset !== request.offset ||
+      (data.next_offset !== null && data.next_offset !== request.offset + request.limit))) return false;
   const ids = new Set();
-  const resourceKeys = ["id", "title", "summary", "topic", "format", "focus", "stages", "questions", "retrieval_score"].sort().join();
+  const resourceKeys = ["id", "title", "summary", "topic", "format", "focus", "stages", "questions",
+    ...(mode === "match" ? ["retrieval_score"] : [])].sort().join();
   return data.resources.every(resource => {
     if (!resource || Object.keys(resource).sort().join() !== resourceKeys ||
         !/^[a-z]+(?:-[a-z]+)*$/.test(resource.id) || ids.has(resource.id) ||
@@ -222,8 +230,9 @@ function validResourceResponse(data, request) {
         !Array.isArray(resource.questions) || !resource.questions.length ||
         !resource.questions.every(question => typeof question === "string" && question.trim()) ||
         new Set(resource.questions).size !== resource.questions.length ||
-        typeof resource.retrieval_score !== "number" || !Number.isFinite(resource.retrieval_score) ||
-        resource.retrieval_score < 0 || resource.retrieval_score > 1 + 1e-12) return false;
+        (mode === "match" && (typeof resource.retrieval_score !== "number" ||
+          !Number.isFinite(resource.retrieval_score) || resource.retrieval_score < 0 ||
+          resource.retrieval_score > 1 + 1e-12))) return false;
     ids.add(resource.id);
     return true;
   });
@@ -290,18 +299,23 @@ document.getElementById("clear-questions").addEventListener("click", () => {
   syncChecks();
   updateQuestions(-1);
 });
-function invalidate() {
+function invalidate(preservePlan = false) {
   generation++;
   if (pending) pending.abort();
   pending = null;
   cards.setAttribute("aria-busy", "false");
-  selected.clear();
-  questionSources.clear();
-  matchedCatalog = null;
+  if (!preservePlan) {
+    selected.clear();
+    questionSources.clear();
+    matchedCatalog = null;
+  }
+  browsePage = null;
+  document.getElementById("catalog-pages").hidden = true;
   updateQuestions();
   cards.replaceChildren(element("div", "Demo selections changed. Find resources to update this view.", "empty"));
   status.textContent = "Ready for a new synthetic resource search.";
   document.getElementById("match").disabled = false;
+  document.getElementById("browse").disabled = false;
   document.getElementById("cancel").hidden = true;
   document.getElementById("retry").hidden = true;
   document.getElementById("change-selections").hidden = true;
@@ -318,7 +332,7 @@ function cancelSearch() {
   document.getElementById("match").focus();
 }
 document.getElementById("cancel").addEventListener("click", cancelSearch);
-document.getElementById("retry").addEventListener("click", () => document.getElementById("preferences").requestSubmit());
+document.getElementById("retry").addEventListener("click", () => searchResources(retryAction.mode, retryAction.offset));
 document.getElementById("change-selections").addEventListener("click", () => document.getElementById("stage").focus());
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && pending) {
@@ -336,9 +350,22 @@ document.getElementById("preset").addEventListener("change", event => {
   document.getElementById("preset").value = "custom";
   invalidate();
 }));
-document.getElementById("preferences").addEventListener("submit", async event => {
+document.getElementById("preferences").addEventListener("submit", event => {
   event.preventDefault();
-  invalidate();
+  searchResources();
+});
+document.getElementById("browse").addEventListener("click", () => searchResources("browse"));
+document.getElementById("previous-page").addEventListener("click", () => {
+  if (browsePage) searchResources("browse", Math.max(0, browsePage.offset - browsePage.limit), true);
+});
+document.getElementById("next-page").addEventListener("click", () => {
+  if (browsePage?.next !== null && browsePage) searchResources("browse", browsePage.next, true);
+});
+async function searchResources(mode = "match", offset = 0, preservePlan = false) {
+  retryAction = {mode, offset};
+  const keepPlan = preservePlan && browsePage && ["stage", "topic", "limit"].every(key =>
+    String(browsePage[key]) === document.getElementById(key).value);
+  invalidate(Boolean(keepPlan));
   const version = generation;
   const request = Object.fromEntries(fields.map(key => [key, document.getElementById(key).value]));
   const rawLimit = document.getElementById("limit").value;
@@ -354,18 +381,24 @@ document.getElementById("preferences").addEventListener("submit", async event =>
     return;
   }
   request.limit = Number(rawLimit);
+  const payload = mode === "browse" ? {stage: request.stage, topic: request.topic, limit: request.limit, offset} : request;
   const button = document.getElementById("match");
-  const focusOnResults = document.activeElement === button;
+  const browseButton = document.getElementById("browse");
+  const focusOnResults = document.activeElement === button || document.activeElement === browseButton;
   button.disabled = true;
+  browseButton.disabled = true;
   document.getElementById("cancel").hidden = false;
   cards.setAttribute("aria-busy", "true");
-  status.textContent = "Matching against the local synthetic catalog…";
+  status.textContent = mode === "browse" ? "Browsing fixed stage/topic content in catalog ID order…" : "Matching against the local synthetic catalog…";
+  document.getElementById("mode-description").textContent = mode === "browse" ?
+    "Exact stage/topic filters, ID order. Format/focus preferences do not filter or rank this view." :
+    "Ranked by learned text similarity, not medical relevance.";
   try {
     if (location.protocol === "file:") throw new Error("Open this dashboard through the Python server at http://127.0.0.1:8765, not as a local file.");
     pending = new AbortController();
-    const response = await fetch("/api/resources", {
+    const response = await fetch(mode === "browse" ? "/api/catalog" : "/api/resources", {
       method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(request), cache: "no-store",
+      body: JSON.stringify(payload), cache: "no-store",
       signal: AbortSignal.any([pending.signal, AbortSignal.timeout(10000)])
     });
     if (!response.ok) {
@@ -375,16 +408,24 @@ document.getElementById("preferences").addEventListener("submit", async event =>
     }
     const data = await response.json();
     if (version !== generation) return;
-    if (!validResourceResponse(data, request)) throw new Error("Unexpected local catalog response. No resources were displayed. Restore the authored catalog, train and restart the Python server before retrying.");
+    if (!validResourceResponse(data, payload, mode)) throw new Error("Unexpected local catalog response. No resources were displayed. Restore the authored catalog, train and restart the Python server before retrying.");
+    if (matchedCatalog && matchedCatalog !== data.catalog_sha256) {
+      selected.clear();
+      questionSources.clear();
+      updateQuestions();
+    }
     matchedCatalog = data.catalog_sha256;
     cards.replaceChildren();
     data.resources.forEach(resource => {
       const card = element("article", undefined, "card");
-      card.append(element("div", `SYNTHETIC · ${resource.format} / Similarity ${resource.retrieval_score.toFixed(3)}`, "meta"),
+      card.append(element("div", mode === "browse" ? `SYNTHETIC · ${resource.format} / Catalog order, no score` :
+        `SYNTHETIC · ${resource.format} / Similarity ${resource.retrieval_score.toFixed(3)}`, "meta"),
         element("h3", resource.title), element("p", resource.summary));
       resource.questions.forEach((question, index) => {
         if (!questionSources.has(question)) questionSources.set(question, []);
-        questionSources.get(question).push({id: resource.id, title: resource.title, number: index + 1});
+        if (!questionSources.get(question).some(source => source.id === resource.id && source.number === index + 1)) {
+          questionSources.get(question).push({id: resource.id, title: resource.title, number: index + 1});
+        }
         const label = element("label", undefined, "question");
         const checkbox = element("input");
         checkbox.type = "checkbox";
@@ -400,7 +441,14 @@ document.getElementById("preferences").addEventListener("submit", async event =>
       });
       cards.append(card);
     });
-    status.textContent = `${data.resources.length} educational resources matched. Similarity is not risk, confidence or probability.`;
+    status.textContent = mode === "browse" ? `${data.resources.length} of ${data.total} fixed stage/topic resources shown in catalog ID order. No similarity ranking.` :
+      `${data.resources.length} educational resources matched. Similarity is not risk, confidence or probability.`;
+    if (mode === "browse") {
+      browsePage = {...payload, next: data.next_offset};
+      document.getElementById("catalog-pages").hidden = !data.total;
+      document.getElementById("previous-page").disabled = offset === 0;
+      document.getElementById("next-page").disabled = data.next_offset === null;
+    }
     if (!data.resources.length) {
       cards.append(element("div", "No stage-compatible educational resources were returned. This says nothing about health needs or service availability. Review the synthetic selections.", "empty"));
       status.textContent = "No educational matches in this synthetic catalog. No clinical conclusions can be drawn.";
@@ -420,12 +468,13 @@ document.getElementById("preferences").addEventListener("submit", async event =>
   } finally {
     if (version === generation) {
       button.disabled = false;
+      browseButton.disabled = false;
       pending = null;
       cards.setAttribute("aria-busy", "false");
       document.getElementById("cancel").hidden = true;
     }
   }
-});
+}
 document.getElementById("review").addEventListener("change", event => {
   document.getElementById("print").disabled = selected.size === 0 || !event.target.checked;
   document.getElementById("print-warning").hidden = event.target.checked && selected.size > 0;
