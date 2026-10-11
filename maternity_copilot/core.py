@@ -31,14 +31,17 @@ def catalog():
         raise ValueError("Educational catalog must contain at least one resource.")
     ids = set()
     for row in rows:
-        if not isinstance(row, dict):
-            raise ValueError("Each educational resource must be an object.")
+        if (not isinstance(row, dict) or set(row) !=
+                {"id", "title", "summary", "topic", "format", "focus", "stages", "questions"}):
+            raise ValueError("Each educational resource must use only the documented catalog fields.")
         for field in ("id", "title", "summary"):
             if not isinstance(row.get(field), str) or not row[field].strip():
                 raise ValueError(f"Educational resource {field} must be nonempty text.")
         if row["id"] in ids:
             raise ValueError("Educational resource IDs must be unique.")
         ids.add(row["id"])
+        if not re.fullmatch(r"[a-z]+(?:-[a-z]+)*", row["id"]):
+            raise ValueError("Educational resource IDs must be lowercase hyphenated words.")
         for field in ("topic", "format", "focus"):
             if row.get(field) not in OPTIONS[field]:
                 raise ValueError(f"Educational resource {field} must use a supported selection.")

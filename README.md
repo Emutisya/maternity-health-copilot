@@ -101,6 +101,7 @@ rather than stopping an unrelated process.
 ## Safety and scope
 
 - There are **no** free-text symptoms, names, health records, contact details, identifiers or clinical inputs.
+- Catalog loading rejects undocumented fields and noncanonical resource IDs before any resource can be exported. This is structural validation, not clinical content review.
 - The server rejects unknown keys, invalid enum values and invalid limits. This is a schema boundary, **not** a symptom detector or safety screening system.
 - No triage, diagnosis, symptom prediction, treatment, medication dosing, health risk score, reassurance or individualized care.
 - Resource bodies contain general topic descriptions and fixed questions for a qualified professional. They are demonstration content, not clinical guidance or authoritative health resources.
