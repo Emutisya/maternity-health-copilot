@@ -6,11 +6,28 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train
+from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
 from maternity_copilot.audit import browse, explain, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_report_publication_preserves_prior_file_on_failure(self):
+        directory = Path("models") / ("report-" + uuid.uuid4().hex)
+        path = directory / "report.json"
+        try:
+            write_json(path, {"existing": True})
+            original = path.read_bytes()
+            with patch("maternity_copilot.core.os.replace", side_effect=PermissionError):
+                with self.assertRaises(PermissionError):
+                    write_json(path, evaluate(fitted_model(catalog())))
+            self.assertEqual(path.read_bytes(), original)
+            self.assertEqual(list(directory.glob("*.tmp")), [])
+            with self.assertRaises(ValueError):
+                write_json(path, {"invalid": float("nan")})
+            self.assertEqual(path.read_bytes(), original)
+        finally:
+            shutil.rmtree(directory)
+
     def test_report_manifest_is_reproducible_and_self_identifying(self):
         model = fitted_model(catalog())
         report = evaluate(model)

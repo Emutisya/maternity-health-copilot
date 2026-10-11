@@ -106,6 +106,11 @@ def fitted_model(rows):
 
 def train(destination):
     model = fitted_model(catalog())
+    write_json(destination, model)
+    return model
+
+
+def write_json(destination, payload):
     path = Path(destination)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
@@ -113,12 +118,13 @@ def train(destination):
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent,
                                          prefix=f".{path.name}.", suffix=".tmp", delete=False) as output:
             temporary = Path(output.name)
-            output.write(json.dumps(model, indent=2))
+            output.write(json.dumps(payload, indent=2, allow_nan=False) + "\n")
+            output.flush()
+            os.fsync(output.fileno())
         os.replace(temporary, path)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
-    return model
 
 
 def load_model(path):

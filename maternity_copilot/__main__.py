@@ -1,7 +1,8 @@
 import argparse
 import json
+from pathlib import Path
 
-from .core import OPTIONS, evaluate, load_model, retrieve, train
+from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
 from .audit import browse, explain, inspect_model
 
@@ -20,6 +21,7 @@ def main():
     evaluation = commands.add_parser("evaluate")
     evaluation.add_argument("--split", choices=["development", "held_out"], default="held_out")
     evaluation.add_argument("--k", type=int, choices=range(1, 7), default=3)
+    evaluation.add_argument("--output", help="Atomically save a reproducible JSON report.")
     for command in ("match", "explain"):
         matching = commands.add_parser(command)
         for key, values in OPTIONS.items():
@@ -44,7 +46,13 @@ def main():
             return
         model = load_model(args.model)
         if args.command == "evaluate":
-            print(json.dumps(evaluate(model, args.split, args.k), indent=2))
+            report = evaluate(model, args.split, args.k)
+            if args.output:
+                target = Path(args.output).resolve()
+                if target == Path(args.model).resolve() or target.is_relative_to(DATA.resolve()):
+                    raise ValueError("Report output must not replace the model or packaged data.")
+                write_json(target, report)
+            print(json.dumps(report, indent=2))
         elif args.command == "match":
             print(json.dumps(retrieve(model, {key: getattr(args, key) for key in OPTIONS}), indent=2))
         elif args.command == "explain":

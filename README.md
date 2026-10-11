@@ -189,6 +189,11 @@ Evaluation reports carry schema version 1, the educational notice, canonical
 model hash and a canonical report hash computed over every field except
 `report_sha256` itself. Identical runs produce identical reports, with no
 timestamp or path-dependent identifiers.
+`evaluate --output models\held-out-report.json` saves the same report it prints
+using an atomic, flushed JSON publication. A failed write preserves the prior
+file; model and packaged-data destinations are rejected. Reports contain only
+authored synthetic cases. Store them under ignored `models\` if not intended
+for version control.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 
