@@ -235,6 +235,11 @@ the authored questions after strict integrity/schema checks. Catalog drift
 requires a fresh human review and selection; hashes are not signatures.
 Unlike the dashboard's ephemeral state, these explicit files persist until
 you delete them. Never put personal data in them.
+`plan ... --text` and `plan-read ... --text` print a readable numbered
+conversation list with per-question sources, catalog hash, human-review
+requirement and the safety notice at both ends. Redirect it to a local text
+file if needed. The renderer refuses modified question text; this is not a
+record of a real appointment or a clinically approved document.
 
 Health-related branding and tidy numerical rankings can encourage over-trust. The product limits output to fixed educational prompts, disallows health narratives and labels every demo clearly. These controls reduce scope, not establish safety. Access, language, disability, literacy and local service availability differ; the English demo cannot represent worldwide needs. A question about a service does not imply that service exists in the user's location. No personalized service availability is inferred.
 

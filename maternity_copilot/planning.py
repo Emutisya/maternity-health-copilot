@@ -51,11 +51,35 @@ def select_questions(stage, selections):
     return plan
 
 
-def save_plan(path, plan):
-    selections = [dict(origin) for question in plan["questions"] for origin in question["sources"]]
-    checked = select_questions(plan["stage"], selections)
+def checked_plan(plan):
+    if (not isinstance(plan, dict) or not isinstance(plan.get("questions"), list)
+            or any(not isinstance(question, dict) or set(question) != {"text", "sources"}
+                   or not isinstance(question["sources"], list) for question in plan["questions"])):
+        raise ValueError("Use a fixed catalog question plan.")
+    selections = [origin for question in plan["questions"] for origin in question["sources"]]
+    checked = select_questions(plan.get("stage"), selections)
     if plan != checked:
-        raise ValueError("Only unchanged fixed catalog question plans can be exported.")
+        raise ValueError("Only unchanged fixed catalog question plans can be rendered or exported.")
+    return checked
+
+
+def render_plan(plan):
+    plan = checked_plan(plan)
+    lines = ["SYNTHETIC EDUCATIONAL CONVERSATION LIST", BANNER, "",
+             "Human review required. Discuss these fixed questions with a qualified professional.",
+             "Not an individualized care plan.", f"Stage selection: {plan['stage']}",
+             f"Catalog SHA-256: {plan['catalog_sha256']}", ""]
+    for number, question in enumerate(plan["questions"], 1):
+        lines.append(f"{number}. {question['text']}")
+        lines.append("   Source: " + ", ".join(
+            f"{origin['resource_id']} question {origin['question_number']}" for origin in question["sources"]))
+    lines.extend(["", BANNER])
+    return "\n".join(lines) + "\n"
+
+
+def save_plan(path, plan):
+    checked = checked_plan(plan)
+    selections = [dict(origin) for question in checked["questions"] for origin in question["sources"]]
     capsule = {"version": 1, "notice": BANNER, "synthetic_catalog": True,
                "human_review_required": True, "catalog_sha256": checked["catalog_sha256"],
                "stage": checked["stage"], "selections": selections}

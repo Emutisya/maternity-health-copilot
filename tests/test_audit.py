@@ -8,10 +8,22 @@ from unittest.mock import patch
 
 from maternity_copilot.core import BANNER, catalog, decode_json, evaluate, fingerprint, fitted_model, load_benchmark, retrieve, train, write_json
 from maternity_copilot.audit import browse, compare_reports, coverage, explain, inspect_model, read_report, sensitivity, sweep
-from maternity_copilot.planning import make_plan, read_plan, save_plan, select_questions
+from maternity_copilot.planning import make_plan, read_plan, render_plan, save_plan, select_questions
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_plain_text_plan_retains_notice_review_and_source_provenance(self):
+        plan = make_plan("pregnancy", ["access-guide"])
+        text = render_plan(plan)
+        self.assertEqual(text.count(BANNER), 2)
+        self.assertIn("Human review required", text)
+        for index, question in enumerate(plan["questions"], 1):
+            self.assertIn(f"{index}. {question['text']}", text)
+            self.assertIn(f"access-guide question {index}", text)
+        plan["questions"][0]["text"] = "Unreviewed text"
+        with self.assertRaises(ValueError):
+            render_plan(plan)
+
     def test_portable_question_selectors_reconstruct_and_reject_edits(self):
         directory = Path("models") / ("plan-" + uuid.uuid4().hex)
         path = directory / "selection.json"

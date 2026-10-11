@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core import DATA, OPTIONS, evaluate, load_model, retrieve, train, write_json
 from .server import make_server
-from .planning import make_plan, read_plan, save_plan, select_questions
+from .planning import make_plan, read_plan, render_plan, save_plan, select_questions
 from .audit import browse, compare_reports, coverage, explain, inspect_model, sensitivity, sweep
 
 
@@ -18,11 +18,13 @@ def main():
     planning = commands.add_parser("plan")
     planning.add_argument("--stage", choices=OPTIONS["stage"], required=True)
     planning.add_argument("--output", help="Save synthetic fixed-question selectors, not free text.")
+    planning.add_argument("--text", action="store_true", help="Print a readable fixed-question conversation list.")
     selection = planning.add_mutually_exclusive_group(required=True)
     selection.add_argument("--resource", action="append")
     selection.add_argument("--question", action="append", help="Fixed catalog ID and 1-based number, e.g. access-guide:2.")
     restoring = commands.add_parser("plan-read")
     restoring.add_argument("--input", required=True)
+    restoring.add_argument("--text", action="store_true")
     sweeping = commands.add_parser("sweep")
     sweeping.add_argument("--k", type=int, choices=range(1, 7), default=3)
     comparing = commands.add_parser("compare")
@@ -51,7 +53,8 @@ def main():
         parser.error("--port must be between 0 and 65535; use 0 to choose an available port.")
     try:
         if args.command == "plan-read":
-            print(json.dumps(read_plan(args.input), indent=2))
+            plan = read_plan(args.input)
+            print(render_plan(plan), end="") if args.text else print(json.dumps(plan, indent=2))
             return
         if args.command == "plan":
             if args.question:
@@ -69,7 +72,7 @@ def main():
                 if target == Path(args.model).resolve() or target.is_relative_to(DATA.resolve()):
                     raise ValueError("Selection output must not replace the model or packaged data.")
                 save_plan(target, plan)
-            print(json.dumps(plan, indent=2))
+            print(render_plan(plan), end="") if args.text else print(json.dumps(plan, indent=2))
             return
         if args.command == "coverage":
             print(json.dumps(coverage(), indent=2))
