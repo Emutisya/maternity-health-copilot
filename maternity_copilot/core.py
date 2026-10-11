@@ -152,14 +152,19 @@ def validate(request):
     return limit
 
 
-def retrieve(model, request):
-    limit = validate(request)
+def model_catalog(model):
     try:
         rows = catalog()
     except (OSError, ValueError, RecursionError) as error:
         raise ModelError("The educational catalog is unavailable or invalid. Restore the catalog, train and restart the server.") from error
     if not isinstance(model, dict) or model.get("catalog_sha256") != fingerprint(rows):
         raise ModelError("The educational catalog changed after training. Run train again and restart the server.")
+    return rows
+
+
+def retrieve(model, request):
+    limit = validate(request)
+    rows = model_catalog(model)
     query = vector(" ".join(request[key] for key in OPTIONS), model["idf"])
     results = []
     for row in rows:

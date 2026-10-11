@@ -171,6 +171,11 @@ class ProjectTests(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 503)
                 self.assertEqual(json.load(caught.exception)["notice"], BANNER)
                 caught.exception.close()
+                with self.assertRaises(HTTPError) as health:
+                    urlopen(self.base + "/api/health", timeout=5)
+                self.assertEqual(health.exception.code, 503)
+                self.assertEqual(json.load(health.exception)["status"], "unavailable")
+                health.exception.close()
         self.assertEqual(retrieve(self.model, REQUEST)["resources"][0]["id"], "appointments-guide")
 
     def test_invalid_and_symptom_inputs_rejected(self):

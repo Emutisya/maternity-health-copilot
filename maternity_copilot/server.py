@@ -5,7 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .core import BANNER, OPTIONS, ModelError, retrieve
+from .core import BANNER, OPTIONS, ModelError, model_catalog, retrieve
 
 
 def unique_fields(pairs):
@@ -64,7 +64,14 @@ def make_server(model, port=8765):
             elif path == "/api/options":
                 self.send(200, {"options": OPTIONS, "notice": BANNER, "synthetic": True})
             elif path == "/api/health":
-                self.send(200, {"status": "ready", "scope": "synthetic educational retrieval"})
+                try:
+                    rows = model_catalog(model)
+                except ModelError as error:
+                    self.send(503, {"status": "unavailable", "error": str(error), "notice": BANNER})
+                    return
+                self.send(200, {"status": "ready", "scope": "synthetic educational retrieval",
+                                "catalog_sha256": model["catalog_sha256"],
+                                "resources": len(rows), "notice": BANNER})
             else:
                 self.send(404, {"error": "Not found.", "notice": BANNER})
 

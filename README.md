@@ -112,6 +112,7 @@ rather than stopping an unrelated process.
 ## HTTP interface
 
 `GET /api/health` checks readiness; `GET /api/options` returns the bounded schema. `GET /` serves only the dashboard.
+Readiness checks the live catalog fingerprint, returning 503 after catalog drift instead of advertising a stale model as ready; ready responses identify the catalog and resource count.
 
 `POST /api/resources` requires `Content-Type: application/json`:
 
