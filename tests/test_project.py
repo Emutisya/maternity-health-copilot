@@ -83,6 +83,19 @@ class ProjectTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_model(path)
 
+    def test_catalog_rejects_ambiguous_ids_and_unusable_resources(self):
+        original = catalog()
+        for rows in ([], [original[0], original[0]], [None]):
+            with patch("maternity_copilot.core.json.loads", return_value=rows), self.assertRaises(ValueError):
+                catalog()
+        for field, value in (("title", ""), ("topic", "diagnosis"),
+                             ("questions", []), ("questions", ["same", "same"]),
+                             ("stages", ["pregnancy", "pregnancy"])):
+            rows = copy.deepcopy(original)
+            rows[0][field] = value
+            with patch("maternity_copilot.core.json.loads", return_value=rows), self.assertRaises(ValueError):
+                catalog()
+
     def test_boolean_weights_cannot_impersonate_numeric_training_values(self):
         model = copy.deepcopy(self.model)
         model["idf"][next(iter(model["idf"]))] = True
@@ -97,6 +110,17 @@ class ProjectTests(unittest.TestCase):
             result = retrieve(self.model, {**REQUEST, "stage": stage})
             self.assertEqual(result["resources"][0]["id"], expected)
             self.assertTrue(all(stage in row["stages"] for row in result["resources"]))
+
+    def test_display_rounding_does_not_change_resource_order(self):
+        rows = copy.deepcopy(catalog()[:2])
+        rows[0]["id"], rows[1]["id"] = "a", "z"
+        for row in rows:
+            row["stages"] = ["pregnancy"]
+        model = {"idf": {"planning": 1}, "vectors": {"a": {"planning": .5000001}, "z": {"planning": .5000002}}}
+        with patch("maternity_copilot.core.catalog", return_value=rows), patch("maternity_copilot.core.vector", return_value={"planning": 1}):
+            ranked = retrieve(model, REQUEST)["resources"]
+        self.assertEqual([row["id"] for row in ranked], ["z", "a"])
+        self.assertEqual(ranked[0]["retrieval_score"], ranked[1]["retrieval_score"])
 
     def test_preferences_affect_ranking(self):
         guide = {**REQUEST, "topic": "support", "focus": "support"}

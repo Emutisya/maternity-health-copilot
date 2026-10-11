@@ -20,7 +20,33 @@ OPTIONS = {
 
 
 def catalog():
-    return json.loads((DATA / "catalog.json").read_text(encoding="utf-8"))
+    rows = json.loads((DATA / "catalog.json").read_text(encoding="utf-8"))
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("Educational catalog must contain at least one resource.")
+    ids = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("Each educational resource must be an object.")
+        for field in ("id", "title", "summary"):
+            if not isinstance(row.get(field), str) or not row[field].strip():
+                raise ValueError(f"Educational resource {field} must be nonempty text.")
+        if row["id"] in ids:
+            raise ValueError("Educational resource IDs must be unique.")
+        ids.add(row["id"])
+        for field in ("topic", "format", "focus"):
+            if row.get(field) not in OPTIONS[field]:
+                raise ValueError(f"Educational resource {field} must use a supported selection.")
+        stages = row.get("stages")
+        if (not isinstance(stages, list) or not stages
+                or any(stage not in OPTIONS["stage"] for stage in stages)
+                or len(stages) != len(set(stages))):
+            raise ValueError("Educational resource stages must be unique supported selections.")
+        questions = row.get("questions")
+        if (not isinstance(questions, list) or not questions
+                or any(not isinstance(question, str) or not question.strip() for question in questions)
+                or len(questions) != len(set(questions))):
+            raise ValueError("Educational resources require unique nonempty discussion questions.")
+    return rows
 
 
 def fingerprint(rows):
@@ -99,11 +125,11 @@ def retrieve(model, request):
             continue
         score = sum(value * model["vectors"][row["id"]].get(term, 0)
                     for term, value in query.items())
-        results.append({**row, "retrieval_score": round(score, 6)})
-    results.sort(key=lambda row: (-row["retrieval_score"], row["id"]))
+        results.append((score, {**row, "retrieval_score": round(score, 6)}))
+    results.sort(key=lambda item: (-item[0], item[1]["id"]))
     return {"notice": BANNER, "prototype": True, "synthetic_catalog": True,
             "score_meaning": "Cosine text similarity, not risk, confidence or probability.",
-            "resources": results[:limit]}
+            "resources": [row for _, row in results[:limit]]}
 
 
 def evaluate(model, split="held_out", k=3):
