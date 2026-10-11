@@ -60,6 +60,7 @@ def main():
     comparing.add_argument("--after", required=True)
     comparing.add_argument("--fail-on-regression", choices=METRICS, nargs="+")
     comparing.add_argument("--tolerance", type=float, default=0)
+    comparing.add_argument("--per-case", action="store_true", help="Also reject any selected per-case metric regression.")
     browsing = commands.add_parser("browse")
     for key, values in OPTIONS.items():
         browsing.add_argument("--" + key, choices=values)
@@ -129,9 +130,9 @@ def main():
         if args.command == "compare":
             comparison = compare_reports(args.before, args.after)
             if args.fail_on_regression:
-                comparison["regression_gate"] = regression_gate(comparison, args.fail_on_regression, args.tolerance)
-            elif args.tolerance != 0:
-                raise ValueError("--tolerance requires --fail-on-regression.")
+                comparison["regression_gate"] = regression_gate(comparison, args.fail_on_regression, args.tolerance, args.per_case)
+            elif args.tolerance != 0 or args.per_case:
+                raise ValueError("--tolerance and --per-case require --fail-on-regression.")
             print(json.dumps(comparison, indent=2))
             if args.fail_on_regression and not comparison["regression_gate"]["passed"]:
                 parser.exit(1)

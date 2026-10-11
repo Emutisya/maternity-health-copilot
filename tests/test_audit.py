@@ -17,6 +17,18 @@ from maternity_copilot.planning import compare_plans, make_plan, merge_plans, re
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_per_case_gate_catches_regressions_masked_by_equal_aggregate(self):
+        request = {"stage": "pregnancy", "topic": "support", "format": "guide", "focus": "support"}
+        comparison = {"metric_deltas": {"ndcg_at_k": 0},
+                      "changed_cases": [{"request": request, "metric_deltas": {"ndcg_at_k": -.2}},
+                                        {"request": {**request, "stage": "postpartum"},
+                                         "metric_deltas": {"ndcg_at_k": .2}}]}
+        self.assertTrue(regression_gate(comparison, ["ndcg_at_k"])["passed"])
+        gate = regression_gate(comparison, ["ndcg_at_k"], per_case=True)
+        self.assertFalse(gate["passed"])
+        self.assertEqual(gate["failed_cases"], [{"request": request, "failed_metrics": ["ndcg_at_k"]}])
+        self.assertTrue(regression_gate(comparison, ["ndcg_at_k"], .2, True)["passed"])
+
     def test_batch_validates_every_request_before_loading_one_snapshot(self):
         request = {"stage": "pregnancy", "topic": "support", "format": "guide", "focus": "support"}
         model, rows = fitted_model(catalog()), catalog()

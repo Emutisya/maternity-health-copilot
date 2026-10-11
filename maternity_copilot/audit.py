@@ -400,13 +400,20 @@ def compare_reports(before_path, after_path):
             "meaning": "Authored relevance comparison only; no statistical or clinical significance."}
 
 
-def regression_gate(comparison, metrics, tolerance=0):
+def regression_gate(comparison, metrics, tolerance=0, per_case=False):
     if (not isinstance(metrics, list) or not metrics or any(metric not in METRICS for metric in metrics)
             or len(set(metrics)) != len(metrics) or type(tolerance) not in (int, float)
-            or not math.isfinite(tolerance) or not 0 <= tolerance <= 1):
+            or not math.isfinite(tolerance) or not 0 <= tolerance <= 1 or type(per_case) is not bool):
         raise ValueError("Use unique documented metrics and finite absolute tolerance 0–1.")
     failures = [metric for metric in metrics
                 if comparison["metric_deltas"][metric] < -tolerance - 1e-12]
-    return {"passed": not failures, "failed_metrics": failures,
+    failed_cases = []
+    if per_case:
+        for case in comparison["changed_cases"]:
+            degraded = [metric for metric in metrics if case["metric_deltas"][metric] < -tolerance - 1e-12]
+            if degraded:
+                failed_cases.append({"request": case["request"], "failed_metrics": degraded})
+    return {"passed": not failures and not failed_cases, "failed_metrics": failures,
+            "per_case": per_case, "failed_cases": failed_cases,
             "absolute_tolerance": tolerance, "arithmetic_allowance": 1e-12,
-            "scope": "Synthetic aggregate retrieval regression only, not a deployment or clinical safety gate."}
+            "scope": "Synthetic retrieval regression only, not a deployment or clinical safety gate."}

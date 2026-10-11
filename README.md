@@ -264,6 +264,10 @@ retrieval checks, add `--fail-on-regression recall_at_k ndcg_at_k` and optional
 exits 1 on aggregate degradation beyond tolerance plus `1e-12` arithmetic
 allowance, 0 on pass, or 2 on invalid input. This is **not a clinical safety or
 deployment gate**; aggregate passes can conceal individual case regressions.
+Add `--per-case` to require that every changed authored case also stays within
+the same tolerance for selected metrics. Failed cases are identified by
+bounded selections, preventing improvements elsewhere from hiding a local
+ranking regression. This remains a retrieval check, never a care-safety gate.
 
 `coverage` needs no model: it audits the 48 possible bounded selections against
 the 18 authored benchmark cases, lists unrepresented combinations, counts
