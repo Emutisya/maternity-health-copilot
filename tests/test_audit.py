@@ -11,6 +11,19 @@ from maternity_copilot.audit import browse, explain, inspect_model
 
 
 class CatalogBoundaryTests(unittest.TestCase):
+    def test_precision_and_average_precision_penalize_irrelevant_ranks(self):
+        model = fitted_model(catalog())
+        report = evaluate(model, k=3)
+        for case in report["cases"]:
+            hits = [identifier in case["relevant"] for identifier in case["ranked"]]
+            self.assertEqual(case["precision_at_k"], sum(hits) / 3)
+            expected = sum(hit * sum(hits[:i + 1]) / (i + 1)
+                           for i, hit in enumerate(hits)) / min(3, len(case["relevant"]))
+            self.assertEqual(case["average_precision_at_k"], expected)
+        self.assertLess(report["precision_at_k"], 1)
+        self.assertEqual(report["map_at_k"], sum(case["average_precision_at_k"]
+                                               for case in report["cases"]) / report["queries"])
+
     def test_benchmark_rejects_unbounded_extras(self):
         benchmark = load_benchmark()
         rows = catalog()

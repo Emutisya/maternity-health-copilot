@@ -222,12 +222,16 @@ def evaluate(model, split="held_out", k=3):
         raise ValueError("Use development or held_out, and k from 1 to 6.")
     rows = model_catalog(model)
     benchmark = load_benchmark(rows)
-    recalls, ndcgs, reciprocal_ranks, cases = [], [], [], []
+    recalls, ndcgs, reciprocal_ranks, precisions, average_precisions, cases = [], [], [], [], [], []
     for case in benchmark[split]:
         request = {key: case[key] for key in OPTIONS}
         ids = [row["id"] for _, row in _rank_rows(model, request, rows)[:k]]
         gold = set(case["relevant"])
         hits = [int(identifier in gold) for identifier in ids]
+        precisions.append(sum(hits) / k)
+        average_precisions.append(sum(
+            hit * sum(hits[:i + 1]) / (i + 1) for i, hit in enumerate(hits)
+        ) / min(k, len(gold)))
         recalls.append(sum(hits) / len(gold))
         dcg = sum(hit / math.log2(i + 2) for i, hit in enumerate(hits))
         ideal = sum(1 / math.log2(i + 2) for i in range(min(k, len(gold))))
@@ -235,6 +239,8 @@ def evaluate(model, split="held_out", k=3):
         reciprocal_ranks.append(next((1 / (i + 1) for i, hit in enumerate(hits) if hit), 0))
         cases.append({"request": request, "relevant": sorted(gold), "ranked": ids,
                       "recall_at_k": recalls[-1], "ndcg_at_k": ndcgs[-1],
+                      "precision_at_k": precisions[-1],
+                      "average_precision_at_k": average_precisions[-1],
                       "reciprocal_rank_at_k": reciprocal_ranks[-1]})
     return {"split": split, "queries": len(recalls), "k": k,
             "catalog_sha256": fingerprint(rows),
@@ -242,5 +248,7 @@ def evaluate(model, split="held_out", k=3):
             "recall_at_k": sum(recalls) / len(recalls),
             "ndcg_at_k": sum(ndcgs) / len(ndcgs),
             "mrr_at_k": sum(reciprocal_ranks) / len(reciprocal_ranks),
+            "precision_at_k": sum(precisions) / len(precisions),
+            "map_at_k": sum(average_precisions) / len(average_precisions),
             "cases": cases,
             "limits": "Tiny authored synthetic relevance benchmark; no clinical validation or population evidence."}
