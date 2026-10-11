@@ -82,6 +82,14 @@ class ProjectTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_model(path)
 
+    def test_boolean_weights_cannot_impersonate_numeric_training_values(self):
+        model = copy.deepcopy(self.model)
+        model["idf"][next(iter(model["idf"]))] = True
+        path = self.workspace / "boolean.json"
+        path.write_text(json.dumps(model), encoding="utf-8")
+        with patch("maternity_copilot.core.fitted_model", return_value=model), self.assertRaises(ValueError):
+            load_model(path)
+
     def test_relevance_and_stage(self):
         for stage, expected in [("pregnancy", "appointments-guide"),
                                 ("postpartum", "appointments-checklist")]:

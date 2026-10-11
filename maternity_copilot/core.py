@@ -65,6 +65,12 @@ def train(destination):
 def load_model(path):
     model = json.loads(Path(path).read_text(encoding="utf-8"))
     if (not isinstance(model, dict) or type(model.get("version")) is not int
+            or not isinstance(model.get("idf"), dict)
+            or any(type(value) not in (int, float) for value in model["idf"].values())
+            or not isinstance(model.get("vectors"), dict)
+            or any(not isinstance(weights, dict)
+                   or any(type(value) not in (int, float) for value in weights.values())
+                   for weights in model["vectors"].values())
             or model != fitted_model(catalog())):
         raise ValueError("Model does not match this catalog and implementation. Run train again.")
     return model
