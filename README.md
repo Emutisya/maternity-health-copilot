@@ -367,3 +367,6 @@ pyproject.toml                    Optional packaging; no runtime dependencies
 ```
 
 CI exercises persistence, stale-model rejection, learned preference relevance, split uniqueness, independently recomputed metrics, every bounded input combination, invalid/symptom inputs and real HTTP inference with origin/size controls. Tests create isolated files under ignored `models\` and remove them afterward. Runtime model artifacts are local only.
+CI runs on Windows and Ubuntu with Python 3.10, 3.13 and 3.14, including CLI
+artifact inspection, saved-report self-comparison with per-case regression
+checks and fixed-question selector round-trip/plaintext rendering. Tests create isolated files under ignored `models\` and remove them afterward. Runtime model artifacts are local only.
